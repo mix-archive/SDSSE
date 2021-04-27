@@ -27,7 +27,7 @@ struct query_t_tuple {
 };
 
 
-class SDSSECQServer {
+class SDSSECQSServer {
 private:
     unordered_map<string, string> tags;
     unordered_map<string, vector<string>> tmap;
@@ -46,12 +46,12 @@ private:
     Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
-    explicit SDSSECQServer(Pairing *e);
+    explicit SDSSECQSServer(Pairing *e);
     void add_entries_in_TMap(const string& label, const string& tag, const string& st, vector<string>& ciphertext_list);
     void add_entries_in_XMap(const string& label, const string& tag, const string& st, vector<string>& ciphertext_list);
     vector<uint8_t*> search(int search_count, int level, int xterm_num, uint8_t *K_X,
                             uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
-                            vector<uint8_t*>& k_wxs, vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list);
+                            vector<uint8_t*>& k_wxs, vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<Zr>& xt_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list);
 };
 
 
