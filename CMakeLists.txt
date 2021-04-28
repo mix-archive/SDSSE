@@ -28,9 +28,11 @@ ADD_EXECUTABLE(BloomFilterTest Test/BloomFilterTest.cpp BF/Hash/SpookyV2.cpp)
 ADD_EXECUTABLE(GGMTest Test/GGMTest.cpp GGM/GGMTree.cpp Util/CommonUtil.c)
 add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp Core/SDSSECQServer.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
 add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp Core/SDSSECQSServer.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
+add_executable(VSDSSECQ VSDSSECQ.cpp Core/VSDSSECQClient.cpp Core/VSDSSECQServer.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
 
 # link
 TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBC)
 TARGET_LINK_LIBRARIES(SDSSECQS OpenSSL::Crypto PBC)
+TARGET_LINK_LIBRARIES(VSDSSECQ OpenSSL::Crypto PBC)

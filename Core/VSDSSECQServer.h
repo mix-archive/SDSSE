@@ -2,8 +2,8 @@
 // Created by shangqi on 2021/4/20.
 //
 
-#ifndef FBDSSE_SDSSECQSSERVER_H
-#define FBDSSE_SDSSECQSSERVER_H
+#ifndef FBDSSE_VSDSSECQSERVER_H
+#define FBDSSE_VSDSSECQSERVER_H
 
 #include <algorithm>
 #include <cstdint>
@@ -26,8 +26,32 @@ struct query_t_tuple {
     int j;
 };
 
+struct verify_t_tuple {
+    int k;
+    mpz_t *a;
+    mpz_t *b;
+    uint8_t *e_y;
+};
 
-class SDSSECQSServer {
+static void hash_to_prime(mpz_t *res, uint8_t *string, size_t size) {
+    int is_prime = 0;
+    uint8_t prime_byte[DIGEST_SIZE];
+    sha256_digest(string, size, prime_byte);
+    int r = 0;
+    while (!is_prime) {
+        uint8_t hash_r[DIGEST_SIZE];
+        sha256_digest((uint8_t*) &r, sizeof(int), hash_r);
+        memcpy(prime_byte + DIGEST_SIZE / 2, hash_r, DIGEST_SIZE / 2);
+        mpz_import(*res, DIGEST_SIZE, 1, 1, 0, 0, prime_byte);
+        if(!mpz_probab_prime_p(*res, 15)) {
+            r++;
+        } else {
+            is_prime = 1;
+        }
+    }
+}
+
+class VSDSSECQServer {
 private:
     unordered_map<string, string> tags;
     unordered_map<string, vector<string>> tmap;
@@ -46,12 +70,13 @@ private:
     Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
-    explicit SDSSECQSServer(Pairing *e);
+    explicit VSDSSECQServer(Pairing *e);
     void add_entries_in_TMap(const string& label, const string& tag, const string& st, vector<string>& ciphertext_list);
     void add_entries_in_XMap(const string& label, const string& tag, const string& st, vector<string>& ciphertext_list);
-    vector<uint8_t*> search(int search_count, int level, int xterm_num, uint8_t *K_X,
+    void search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res_e,
+            int search_count, int level, int xterm_num, uint8_t *K_X,
                             uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
-                            vector<uint8_t*>& k_wxs, vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<Zr>& xt_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list);
+                            vector<uint8_t*>& k_wxs, vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list);
 };
 
 
