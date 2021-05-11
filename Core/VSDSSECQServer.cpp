@@ -64,7 +64,7 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
     mpz_t acc;
     mpz_init_set_ui(acc, 1);
     // recover XSet for the search
-    BloomFilter<128, XTAG_SIZE, XSET_HASH> xset;
+    unordered_set<string> xset;
     for(int i = 0; i < k_wxs.size(); i++) {
         // the extracted XSet
         unordered_map<string, GT> new_X, old_X, res_X;
@@ -137,7 +137,7 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
             hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
             mpz_mul(acc, acc, xtag_hash);
             // add xtag into the Bloom filter
-            xset.add_tag((uint8_t *) res.second.toString().c_str());
+            xset.insert(res.second.toString());
         }
     }
     // XSet is recovered
@@ -211,7 +211,7 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
             uint8_t y_in_byte[element_length_in_bytes(const_cast<element_s *>(y.getElement()))];
             element_to_bytes(y_in_byte, const_cast<element_s *>(y.getElement()));
             GT tag = xtoken_list[it.second.search_count][it.second.j][i] ^ Zr(*e, it.second.e_y + AES_BLOCK_SIZE + sizeof(int), 20);
-            if(xset.might_contain((uint8_t*) tag.toString().c_str())) {
+            if(xset.find(tag.toString()) != xset.end()) {
                 counter++;
             } else {
                 uint8_t tag_in_byte[element_length_in_bytes(const_cast<element_s *>(tag.getElement()))];

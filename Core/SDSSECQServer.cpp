@@ -60,7 +60,7 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
                                        uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
                                        vector<uint8_t*>& k_wxs,  vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list) {
     // recover XSet for the search
-    BloomFilter<128, XTAG_SIZE, XSET_HASH> xset;
+    unordered_set<string> xset;
     for(int i = 0; i < k_wxs.size(); i++) {
         // save the latest XMap state
         uint8_t ST_X_cur[DIGEST_SIZE];
@@ -125,7 +125,7 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
         cache_x[x_token_list[i]] = res_X;
         // convert the res_X to a Bloom filter
         for(const auto& res : res_X) {
-            xset.add_tag((uint8_t *) res.second.toString().c_str());
+            xset.insert(res.second.toString());
         }
     }
     // XSet is recovered
@@ -200,7 +200,7 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
             uint8_t y_in_byte[element_length_in_bytes(const_cast<element_s *>(y.getElement()))];
             element_to_bytes(y_in_byte, const_cast<element_s *>(y.getElement()));
             GT tag = xtoken_list[it.second.search_count][it.second.j][i] ^ Zr(*e, it.second.e_y + AES_BLOCK_SIZE + sizeof(int), 20);
-            if(xset.might_contain((uint8_t*) tag.toString().c_str())) {
+            if(xset.find(tag.toString()) != xset.end()) {
                 counter++;
             } else break;
         }
