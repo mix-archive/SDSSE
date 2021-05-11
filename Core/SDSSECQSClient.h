@@ -27,8 +27,8 @@ private:
     uint8_t *iv = (unsigned char*) "9876543210123456";
 
     // deletion map
-    unordered_map<string, BloomFilter<32, GGM_SIZE, HASH_SIZE>*> MSK_T;
-    unordered_map<string, BloomFilter<32, GGM_SIZE, HASH_SIZE>*> MSK_X;
+    unordered_map<string, BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>*> MSK_T;
+    unordered_map<string, BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>*> MSK_X;
 
     // search count map
     unordered_map<string, int> CT_T;
@@ -51,7 +51,8 @@ private:
     SDSSECQSServer *server;
 
     Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
-    vector<GGMNode> rev_key_generation(BloomFilter<32, 65536, 3>* deletion_map, uint8_t *key);
+    Zr Hp(uint8_t *input, size_t input_size);
+    vector<GGMNode> rev_key_generation(BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>* deletion_map, uint8_t *key);
 public:
     SDSSECQSClient();
     void update(OP op, const string& keyword, int ind);

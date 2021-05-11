@@ -13,7 +13,14 @@ Zr VSDSSECQClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
     return Zr(*e, (void*) PRF, DIGEST_SIZE);
 }
 
-vector<GGMNode> VSDSSECQClient::rev_key_generation(BloomFilter<32, 65536, 3>* deletion_map, uint8_t *key) {
+Zr VSDSSECQClient::Hp(uint8_t *input, size_t input_size) {
+    uint8_t PRF[DIGEST_SIZE];
+    sha256_digest(input, input_size, PRF);
+
+    return Zr(*e, (void*) PRF, DIGEST_SIZE);
+}
+
+vector<GGMNode> VSDSSECQClient::rev_key_generation(BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>* deletion_map, uint8_t *key) {
     // search all deleted positions
     vector<long> bf_pos;
     for (int i = 0; i < GGM_SIZE; ++i) {
@@ -72,8 +79,8 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
     mpz_t acc_x;
     if (MSK_T.find(keyword) == MSK_T.end()) {
         // deletion map
-        MSK_T[keyword] = new BloomFilter<32, GGM_SIZE, HASH_SIZE>();
-        MSK_X[keyword] = new BloomFilter<32, GGM_SIZE, HASH_SIZE>();
+        MSK_T[keyword] = new BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>();
+        MSK_X[keyword] = new BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>();
         // counter map
         CT_T[keyword] = 0;
         CT_X[keyword] = 0;
@@ -159,7 +166,7 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
         memcpy(ey, encrypted_id, sizeof(encrypted_id));
         memcpy(ey + sizeof(encrypted_id), y_in_byte, sizeof(y_in_byte));
         // get all offsets in BF
-        vector<long> indexes = BloomFilter<32, GGM_SIZE, HASH_SIZE>::get_index(tag);
+        vector<long> indexes = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index(tag);
         sort(indexes.begin(), indexes.end());
         // get SRE ciphertext list for TMap
         vector<string> tuple_list;
@@ -225,7 +232,7 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
         hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
         mpz_mul(acc_x, acc_x, xtag_hash);
         // generate xterm=(xtag^r-1)
-        GT xterm = xtag ^ (Zr(*e, (long int) 1) / Fp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE, K_X));
+        GT xterm = xtag ^ (Zr(*e, (long int) 1) / Hp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE));
         // convert xterm to byte array
         uint8_t xterm_in_byte[element_length_in_bytes(const_cast<element_s *>(xterm.getElement()))];
         element_to_bytes(xterm_in_byte, const_cast<element_s *>(xterm.getElement()));
@@ -398,7 +405,7 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     vector<uint8_t*> encrypted_res_list;
 
     server->search(encrypted_verify_list, encrypted_res_list,
-                   sterm_search_count, tree->get_level(), xterms.size(), K_X,
+                   sterm_search_count, tree->get_level(), xterms.size(),
                    K_wt,
                    ST_T[string((const char*) w_T, sizeof(w_T))],CT[string((const char*) w_T, sizeof(w_T))],
                    T_revoked_key_list,
@@ -455,14 +462,13 @@ vector<int> VSDSSECQClient::search(int count, ...) {
             mpz_t xtag_hash;
             mpz_init(xtag_hash);
             hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
-            // verify the deletion
-            mpz_t a, b, gcd;
-            mpz_init(a);
-            mpz_init(b);
-            mpz_init(gcd);
-            mpz_gcdext(gcd, a, b, xtag_hash, acc);
-            if(mpz_cmp_ui(gcd, 1) != 0) {
-                cout << "REJECT: Invalid deletion in File" << v_list[i] << "detected" << endl;
+            // verify the deletion (a * xtag + b * acc)
+            mpz_t ver;
+            mpz_init(ver);
+            mpz_mul(ver, encrypted_verify_list[i].a, xtag_hash);
+            mpz_addmul(ver, encrypted_verify_list[i].b, acc);
+            if(mpz_cmp_ui(ver, 1) != 0) {
+                cout << "REJECT: Delete extra file " << v_list[i] << " detected" << endl;
             }
         }
     } else {    // this result is invalid, return an empty one instead

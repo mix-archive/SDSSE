@@ -13,7 +13,14 @@ Zr SDSSECQClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
     return Zr(*e, (void*) PRF, DIGEST_SIZE);
 }
 
-vector<GGMNode> SDSSECQClient::rev_key_generation(BloomFilter<32, 65536, 3>* deletion_map, uint8_t *key) {
+Zr SDSSECQClient::Hp(uint8_t *input, size_t input_size) {
+    uint8_t PRF[DIGEST_SIZE];
+    sha256_digest(input, input_size, PRF);
+
+    return Zr(*e, (void*) PRF, DIGEST_SIZE);
+}
+
+vector<GGMNode> SDSSECQClient::rev_key_generation(BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>* deletion_map, uint8_t *key) {
     // search all deleted positions
     vector<long> bf_pos;
     for (int i = 0; i < GGM_SIZE; ++i) {
@@ -66,8 +73,8 @@ void SDSSECQClient::update(OP op, const string& keyword, int ind) {
     // MSK_T is used as the indicator here;
     if (MSK_T.find(keyword) == MSK_T.end()) {
         // deletion map
-        MSK_T[keyword] = new BloomFilter<32, GGM_SIZE, HASH_SIZE>();
-        MSK_X[keyword] = new BloomFilter<32, GGM_SIZE, HASH_SIZE>();
+        MSK_T[keyword] = new BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>();
+        MSK_X[keyword] = new BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>();
         // counter map
         CT_T[keyword] = 0;
         CT_X[keyword] = 0;
@@ -138,7 +145,7 @@ void SDSSECQClient::update(OP op, const string& keyword, int ind) {
         memcpy(ey, encrypted_id, sizeof(encrypted_id));
         memcpy(ey + sizeof(encrypted_id), y_in_byte, sizeof(y_in_byte));
         // get all offsets in BF
-        vector<long> indexes = BloomFilter<32, GGM_SIZE, HASH_SIZE>::get_index(tag);
+        vector<long> indexes = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index(tag);
         sort(indexes.begin(), indexes.end());
         // get SRE ciphertext list for TMap
         vector<string> tuple_list;
@@ -197,7 +204,7 @@ void SDSSECQClient::update(OP op, const string& keyword, int ind) {
         // generate xterm=g^(Fp(K_X, w)*xind*r-1)
         GT xterm = g^(Fp((uint8_t*) keyword.c_str(), keyword.size(), K_X)
                 * xind
-                / Fp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE, K_X));
+                / Hp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE));
         // convert xterm to byte array
         uint8_t xterm_in_byte[element_length_in_bytes(const_cast<element_s *>(xterm.getElement()))];
         element_to_bytes(xterm_in_byte, const_cast<element_s *>(xterm.getElement()));
@@ -349,7 +356,7 @@ vector<int> SDSSECQClient::search(int count, ...) {
     va_end(keyword_list);
     // send all tokens to the server and retrieve tuples
     vector<uint8_t*> encrypted_res_list =
-            server->search(sterm_search_count, tree->get_level(), xterms.size(), K_X,
+            server->search(sterm_search_count, tree->get_level(), xterms.size(),
                            K_wt,
                            ST_T[string((const char*) w_T, sizeof(w_T))],CT[string((const char*) w_T, sizeof(w_T))],
                            T_revoked_key_list,

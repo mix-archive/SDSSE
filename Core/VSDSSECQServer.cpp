@@ -13,6 +13,13 @@ Zr VSDSSECQServer::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
     return Zr(*e, (void*) PRF, DIGEST_SIZE);
 }
 
+Zr VSDSSECQServer::Hp(uint8_t *input, size_t input_size) {
+    uint8_t PRF[DIGEST_SIZE];
+    sha256_digest(input, input_size, PRF);
+
+    return Zr(*e, (void*) PRF, DIGEST_SIZE);
+}
+
 void VSDSSECQServer::compute_leaf_keys(unordered_map<long, uint8_t*>& keys, const vector<GGMNode>& node_list, int level) {
     for(GGMNode node : node_list) {
         for (int i = 0; i < pow(2, level - node.level); ++i) {
@@ -50,7 +57,7 @@ void VSDSSECQServer::add_entries_in_XMap(const string& label, const string& tag,
 }
 
 void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res_e,
-                                        int search_count, int level, int xterm_num, uint8_t *K_X,
+                                        int search_count, int level, int xterm_num,
                                         uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
                                         vector<uint8_t*>& k_wxs,  vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list) {
     // acc on server side
@@ -79,7 +86,7 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
             unordered_map<long, uint8_t*> keys;
             compute_leaf_keys(keys, X_revoked_list[i], level);
             // get the insert position of the tag
-            vector<long> search_pos = BloomFilter<32, GGM_SIZE, HASH_SIZE>::get_index((uint8_t*) tags[xmap_label_str].c_str());
+            vector<long> search_pos = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index((uint8_t*) tags[xmap_label_str].c_str());
             sort(search_pos.begin(), search_pos.end());
             // derive the key from search position and decrypt the id
             vector<string> ciphertext_list = xmap[xmap_label_str];
@@ -91,7 +98,7 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
                                 xterm);
                     // reconstruct xtag with xterm^r and store it in new_X
                     new_X[tags[xmap_label_str]] = GT(*e, xterm, ciphertext_list[k].size() - AES_BLOCK_SIZE)
-                            ^ Fp(ST_X_cur, DIGEST_SIZE, K_X);
+                            ^ Hp(ST_X_cur, DIGEST_SIZE);
                     free(xterm);
                 } else if(k < min(search_pos.size(), ciphertext_list.size()) - 1) {// the current key does not exist, but still can try the next key
                     continue;
@@ -155,7 +162,7 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
         unordered_map<long, uint8_t*> keys;
         compute_leaf_keys(keys, T_revoked_list, level);
         // get the insert position of the tag
-        vector<long> search_pos = BloomFilter<32, GGM_SIZE, HASH_SIZE>::get_index((uint8_t*) tags[tmap_label_str].c_str());
+        vector<long> search_pos = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index((uint8_t*) tags[tmap_label_str].c_str());
         sort(search_pos.begin(), search_pos.end());
         // derive the key from search position and decrypt the id
         vector<string> ciphertext_list = tmap[tmap_label_str];
@@ -218,7 +225,12 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
                 mpz_init(b);
                 mpz_init(gcd);
                 mpz_gcdext(gcd, a, b, tag_hash, acc);
-                res_v.emplace_back(verify_t_tuple{i, &a, &b, it.second.e_y});
+                verify_t_tuple tuple{};
+                tuple.k = i;
+                mpz_init_set(tuple.a, a);
+                mpz_init_set(tuple.b, b);
+                tuple.e_y = it.second.e_y;
+                res_v.emplace_back(tuple);
                 break;
             }
         }
