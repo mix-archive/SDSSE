@@ -201,7 +201,7 @@ vector<uint8_t*> SDSSECQSServer::search(int search_count, int level, int xterm_n
             uint8_t y_in_byte[element_length_in_bytes(const_cast<element_s *>(y.getElement()))];
             element_to_bytes(y_in_byte, const_cast<element_s *>(y.getElement()));
             GT tag = xtoken_list[it.second.search_count][it.second.j][i] ^ Zr(*e, it.second.e_y + AES_BLOCK_SIZE + sizeof(int), 20);
-            if(wxset.find(tag.toString().c_str()) != wxset.end()) {
+            if(wxset.find(tag.toString()) != wxset.end()) {
                 counter++;
             } else break;
         }
