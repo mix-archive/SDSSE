@@ -45,7 +45,8 @@ private:
 
     // pairing and GT element
     Pairing *e;
-    GT g;
+    GT *g;
+    GPP<GT> *gpp;
 
     // SSE Server
     SDSSECQSServer *server;

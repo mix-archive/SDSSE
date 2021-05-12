@@ -62,11 +62,13 @@ VSDSSECQClient::VSDSSECQClient() {
         element_set_str(old_g, s, 2);
         uint8_t old_g_in_bytes[element_length_in_bytes(old_g)];
         element_to_bytes(old_g_in_bytes, old_g);
-        g = GT(*e, old_g_in_bytes, sizeof(old_g_in_bytes));
+        g = new GT(*e, old_g_in_bytes, sizeof(old_g_in_bytes));
+        gpp = new GPP<GT>(*e, *g);
     } else {
         // a new group is required
-        g = GT(*e, false);
-        element_out_str(saved_g, 2, const_cast<element_s *>(g.getElement()));
+        g = new GT(*e, false);
+        gpp = new GPP<GT>(*e, *g);
+        element_out_str(saved_g, 2, const_cast<element_s *>(g->getElement()));
     }
     fclose(saved_g);
     server = new VSDSSECQServer(e);
@@ -223,7 +225,7 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
                   begin(C_ST_CX),
                   bit_xor<>());
         // generate xtag=g^(Fp(K_X, w)*xind)
-        GT xtag = g ^ (Fp((uint8_t*) keyword.c_str(), keyword.size(), K_X) * xind);
+        GT xtag = (*gpp) ^ (Fp((uint8_t*) keyword.c_str(), keyword.size(), K_X) * xind);
         uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
         element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
         // update acc_x
@@ -259,7 +261,7 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
         server->add_entries_in_XMap(xmap_label_str, tag_str, st_x_str, xtag_list);
     } else {
         // compute xtag for deletion
-        GT xtag = g ^ (Fp((uint8_t *) keyword.c_str(), keyword.size(), K_X) * Fp((uint8_t*) &ind, sizeof(int), K_I));
+        GT xtag = (*gpp) ^ (Fp((uint8_t *) keyword.c_str(), keyword.size(), K_X) * Fp((uint8_t*) &ind, sizeof(int), K_I));
         uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
         element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
         // update acc_x
@@ -393,7 +395,7 @@ vector<int> VSDSSECQClient::search(int count, ...) {
                 memcpy(Z_w_T_i, w_T_i, sizeof(w_T_i));
                 memcpy(Z_w_T_i + sizeof(w_T_i), &j, sizeof(int));
                 Zr z = Fp(Z_w_T_i, sizeof(Z_w_T_i), K_Z);
-                token_j.emplace_back(g ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
+                token_j.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
             }
             token_i_j.emplace_back(token_j);
         }
@@ -455,7 +457,7 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     if(memcmp(h_t, h_T[sterm], DIGEST_SIZE) == 0) {
         for(int i = 0; i < v_list.size(); i++) {
             // get xtag
-            GT xtag = g ^ (Fp((uint8_t *) xterms[encrypted_verify_list[i].k].c_str(), xterms[encrypted_verify_list[i].k].size(), K_X) * Fp((uint8_t*) &v_list[i], sizeof(int), K_I));
+            GT xtag = (*gpp) ^ (Fp((uint8_t *) xterms[encrypted_verify_list[i].k].c_str(), xterms[encrypted_verify_list[i].k].size(), K_X) * Fp((uint8_t*) &v_list[i], sizeof(int), K_I));
             uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
             element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
             // compute hash of xtag

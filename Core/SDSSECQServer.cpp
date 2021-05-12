@@ -24,10 +24,10 @@ void SDSSECQServer::compute_leaf_keys(unordered_map<long, uint8_t*>& keys, const
     for(GGMNode node : node_list) {
         for (int i = 0; i < pow(2, level - node.level); ++i) {
             int offset = ((node.index) << (level - node.level)) + i;
-            uint8_t derive_key[AES_BLOCK_SIZE];
-            memcpy(derive_key, node.key, AES_BLOCK_SIZE);
-            GGMTree::derive_key_from_tree(derive_key,  offset, level - node.level, 0);
             if(keys.find(offset) == keys.end()) {
+                uint8_t derive_key[AES_BLOCK_SIZE];
+                memcpy(derive_key, node.key, AES_BLOCK_SIZE);
+                GGMTree::derive_key_from_tree(derive_key,  offset, level - node.level, 0);
                 keys[offset] = (uint8_t*) malloc(AES_BLOCK_SIZE);
                 memcpy(keys[offset], derive_key, AES_BLOCK_SIZE);
             }
@@ -68,6 +68,9 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
         // the extracted XSet
         unordered_map<string, GT> new_X, old_X, res_X;
         vector<string> del_X;
+        // pre-search, derive all keys
+        unordered_map<long, uint8_t*> keys;
+        compute_leaf_keys(keys, X_revoked_list[i], level);
         for (int j = counter_xs[i]; j >= 0; j--) {
             // compute the label for XMap
             uint8_t XA_ST[DIGEST_SIZE];
@@ -78,9 +81,6 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
             // extract the xmap state saved on server
             uint8_t x_server_state[DIGEST_SIZE];
             memcpy(x_server_state, (uint8_t*) st_x[xmap_label_str].c_str(), DIGEST_SIZE);
-            // pre-search, derive all keys
-            unordered_map<long, uint8_t*> keys;
-            compute_leaf_keys(keys, X_revoked_list[i], level);
             // get the insert position of the tag
             vector<long> search_pos = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index((uint8_t*) tags[xmap_label_str].c_str());
             sort(search_pos.begin(), search_pos.end());
@@ -108,10 +108,10 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
                       begin(x_server_state),
                       begin(ST_X_cur),
                       bit_xor<>());
-            // free all keys for this cycle
-            for(auto it : keys) {
-                free(it.second);
-            }
+        }
+        // free all keys for this cycle
+        for(auto it : keys) {
+            free(it.second);
         }
         // try to update cache by remove all deleted tags
         old_X = cache_x[x_token_list[i]];
@@ -136,6 +136,9 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
     // the extracted TSet
     unordered_map<string, query_t_tuple> new_T, old_T, res_T;
     vector<string> del_T;
+    // pre-search, derive all keys
+    unordered_map<long, uint8_t*> keys;
+    compute_leaf_keys(keys, T_revoked_list, level);
     for (int i = counter_t; i >= 0; i--) {
         // compute the label for TMap
         uint8_t U_ST[DIGEST_SIZE];
@@ -146,9 +149,6 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
         // extract the tmap state saved on server
         uint8_t t_server_state[DIGEST_SIZE];
         memcpy(t_server_state, (uint8_t*) st_t[tmap_label_str].c_str(), DIGEST_SIZE);
-        // pre-search, derive all keys
-        unordered_map<long, uint8_t*> keys;
-        compute_leaf_keys(keys, T_revoked_list, level);
         // get the insert position of the tag
         vector<long> search_pos = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index((uint8_t*) tags[tmap_label_str].c_str());
         sort(search_pos.begin(), search_pos.end());
@@ -173,10 +173,10 @@ vector<uint8_t*> SDSSECQServer::search(int search_count, int level, int xterm_nu
                   begin(t_server_state),
                   begin(ST_T_cur),
                   bit_xor<>());
-        // free all keys for this cycle
-        for(auto it : keys) {
-            free(it.second);
-        }
+    }
+    // free all keys for this cycle
+    for(auto it : keys) {
+        free(it.second);
     }
     // try to update cache by remove all deleted tags
     old_T = cache_t[t_token];

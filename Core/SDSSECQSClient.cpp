@@ -60,10 +60,12 @@ SDSSECQSClient::SDSSECQSClient() {
         element_set_str(old_g, s, 2);
         uint8_t old_g_in_bytes[element_length_in_bytes(old_g)];
         element_to_bytes(old_g_in_bytes, old_g);
-        g = GT(*e, old_g_in_bytes, sizeof(old_g_in_bytes));
+        g = new GT(*e, old_g_in_bytes, sizeof(old_g_in_bytes));
+        gpp = new GPP<GT>(*e, *g);
     } else {
-        g = GT(*e, false);
-        element_out_str(saved_g, 2, const_cast<element_s *>(g.getElement()));
+        g = new GT(*e, false);
+        gpp = new GPP<GT>(*e, *g);
+        element_out_str(saved_g, 2, const_cast<element_s *>(g->getElement()));
     }
     fclose(saved_g);
     server = new SDSSECQSServer(e);
@@ -203,7 +205,7 @@ void SDSSECQSClient::update(OP op, const string& keyword, int ind) {
                   begin(C_ST_CX),
                   bit_xor<>());
         // generate xterm=g^(Fp(K_X, w)*xind*r^-1*Fp(K_x, w)^-1)
-        GT xterm = g^(Fp((uint8_t*) keyword.c_str(), keyword.size(), K_X)
+        GT xterm = (*gpp)^(Fp((uint8_t*) keyword.c_str(), keyword.size(), K_X)
                 * xind
                 / Hp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE)
                 / Fp((uint8_t*) keyword.c_str(), keyword.size(), K_x));
@@ -350,7 +352,7 @@ vector<int> SDSSECQSClient::search(int count, ...) {
                 memcpy(Z_w_T_i, w_T_i, sizeof(w_T_i));
                 memcpy(Z_w_T_i + sizeof(w_T_i), &j, sizeof(int));
                 Zr z = Fp(Z_w_T_i, sizeof(Z_w_T_i), K_Z);
-                token_j.emplace_back(g ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)
+                token_j.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)
                     * Fp((uint8_t*) sterm.c_str(), sterm.size(), K_z)));
             }
             token_i_j.emplace_back(token_j);
