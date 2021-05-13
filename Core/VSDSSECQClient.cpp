@@ -75,10 +75,11 @@ VSDSSECQClient::VSDSSECQClient() {
 }
 
 void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
+    // the hashed prime of xtag
+    mpz_t xtag_hash;
+    mpz_init(xtag_hash);
     // if w is never inserted, initialise the deletion map and counter map
     // MSK_T is used as the indicator here;
-    uint8_t h_t[DIGEST_SIZE];
-    mpz_t acc_x;
     if (MSK_T.find(keyword) == MSK_T.end()) {
         // deletion map
         MSK_T[keyword] = new BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>();
@@ -88,12 +89,8 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
         CT_X[keyword] = 0;
         // verification map
         int t = 0;
-        sha256_digest((uint8_t*) &t, sizeof(int), h_t);
-        mpz_init_set_ui(acc_x, 1);
-    } else {
-        // use the existing value in the verfication map if it exists
-        memcpy(h_t, h_T[keyword], DIGEST_SIZE);
-        mpz_set(acc_x, acc_X[keyword]);
+        sha256_digest((uint8_t*) &t, sizeof(int), h_T[keyword]);
+        mpz_init_set_ui(acc_X[keyword], 1);
     }
     // compute the tag (w||ind)
     uint8_t pair[keyword.size() + sizeof(int)];
@@ -102,12 +99,12 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
     // generate the tag PRF
     uint8_t tag[DIGEST_SIZE];
     hmac_digest(pair, keyword.size() + sizeof(int), K_t, AES_BLOCK_SIZE, tag);
-    // update h_t
+    // update h_T[keyword]
     uint8_t new_hash[DIGEST_SIZE];
     sha256_digest((uint8_t*) &ind, sizeof(int), new_hash);
     transform(begin(new_hash), end(new_hash),
-              begin(h_t),
-              begin(h_t),
+              begin(h_T[keyword]),
+              begin(h_T[keyword]),
               bit_xor<>());
     // process the operator
     if (op == INS) {
@@ -229,10 +226,8 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
         uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
         element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
         // update acc_x
-        mpz_t xtag_hash;
-        mpz_init(xtag_hash);
         hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
-        mpz_mul(acc_x, acc_x, xtag_hash);
+        mpz_mul(acc_X[keyword], acc_X[keyword], xtag_hash);
         // generate xterm=(xtag^r-1)
         GT xterm = xtag ^ (Zr(*e, (long int) 1) / Hp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE));
         // convert xterm to byte array
@@ -265,17 +260,14 @@ void VSDSSECQClient::update(OP op, const string& keyword, int ind) {
         uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
         element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
         // update acc_x
-        mpz_t xtag_hash;
-        mpz_init(xtag_hash);
         hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
-        mpz_fdiv_q(acc_x, acc_x, xtag_hash);
+        mpz_fdiv_q(acc_X[keyword], acc_X[keyword], xtag_hash);
         // insert the tag into the deletion map
         MSK_T[keyword]->add_tag(tag);
         MSK_X[keyword]->add_tag(tag);
     }
-    // update the verification map
-    memcpy(h_T[keyword], h_t, DIGEST_SIZE);
-    mpz_set(acc_X[keyword], acc_x);
+    // mpz clear up
+    mpz_clear(xtag_hash);
 }
 
 vector<int> VSDSSECQClient::search(int count, ...) {
@@ -294,6 +286,14 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     vector<vector<vector<GT>>> xtoken_list;         // xtoken list (GT element list)
     // verification sums
     mpz_t acc;
+    // initialise acc to 1
+    mpz_init_set_ui(acc, 1);
+    // hash prime of xtag
+    mpz_t xtag_hash;
+    mpz_init(xtag_hash);
+    // verify the deletion (a * xtag + b * acc)
+    mpz_t ver;
+    mpz_init(ver);
     // cache tokens
     string token_T_str;                             // the token for TMap cache
     vector<string> token_X_str_list;                // the token list for XMap cache
@@ -307,8 +307,6 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     }
     // save the current counter
     int sterm_search_count = CT_T[sterm];
-    // initialise acc to 1
-    mpz_init_set_ui(acc, 1);
     // compute the token for TMap (sterm||0)
     uint8_t pair_T[sterm.size() + sizeof(int)];
     memset(pair_T, 0, sizeof(pair_T));
@@ -460,23 +458,25 @@ vector<int> VSDSSECQClient::search(int count, ...) {
             GT xtag = (*gpp) ^ (Fp((uint8_t *) xterms[encrypted_verify_list[i].k].c_str(), xterms[encrypted_verify_list[i].k].size(), K_X) * Fp((uint8_t*) &v_list[i], sizeof(int), K_I));
             uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
             element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
-            // compute hash of xtag
-            mpz_t xtag_hash;
-            mpz_init(xtag_hash);
             hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
-            // verify the deletion (a * xtag + b * acc)
-            mpz_t ver;
-            mpz_init(ver);
+
             mpz_mul(ver, encrypted_verify_list[i].a, xtag_hash);
             mpz_addmul(ver, encrypted_verify_list[i].b, acc);
             if(mpz_cmp_ui(ver, 1) != 0) {
                 cout << "REJECT: Delete extra file " << v_list[i] << " detected" << endl;
             }
+            // mpz clear up
+            mpz_clear(encrypted_verify_list[i].a);
+            mpz_clear(encrypted_verify_list[i].b);
         }
     } else {    // this result is invalid, return an empty one instead
         cout << "REJECT: TSet has been tampered with, all results are rejected" << endl;
         return vector<int>();
     }
+    // mpz clear up
+    mpz_clear(acc);
+    mpz_clear(xtag_hash);
+    mpz_clear(ver);
     return res;
 }
 
