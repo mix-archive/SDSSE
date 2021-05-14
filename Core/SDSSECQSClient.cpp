@@ -384,7 +384,6 @@ vector<int> SDSSECQSClient::search(int count, ...) {
                 K_wt_2, encyrpted_res,
                 (uint8_t*)&ind);
         res.push_back(ind);
-        free(encyrpted_res);
     }
     return res;
 }

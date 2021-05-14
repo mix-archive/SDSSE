@@ -449,7 +449,6 @@ vector<int> VSDSSECQClient::search(int count, ...) {
                   begin(h_t),
                   bit_xor<>());
         v_list.push_back(ind);
-        free(encyrpted_res.e_y);
     }
     // if TSet is valid, continue to verify deletion
     if(memcmp(h_t, h_T[sterm], DIGEST_SIZE) == 0) {
