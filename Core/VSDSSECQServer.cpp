@@ -56,7 +56,7 @@ void VSDSSECQServer::add_entries_in_XMap(const string& label, const string& tag,
     xmap[label] = move(ciphertext_list);
 }
 
-void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res_e,
+void VSDSSECQServer::search(vector<uint8_t*> &res_e, vector<verify_t_tuple> &res_v,
                                         int search_count, int level, int xterm_num,
                                         uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
                                         vector<uint8_t*>& k_wxs,  vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list) {
@@ -74,15 +74,19 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
     // recover XSet for the search
     BloomFilter<128, XSET_SIZE, XSET_HASH> xset;
     for(int i = 0; i < k_wxs.size(); i++) {
+        // the latest XMap state
+        uint8_t ST_X_cur[DIGEST_SIZE];
         // the extracted XSet
         unordered_map<string, GT> new_X, old_X, res_X;
         vector<string> del_X;
-        // save the latest XMap state
-        uint8_t ST_X_cur[DIGEST_SIZE];
-        memcpy(ST_X_cur, state_xs[i], DIGEST_SIZE);
-        // pre-search, derive all keys
+        // SRE keys
         unordered_map<long, uint8_t*> keys;
-        compute_leaf_keys(keys, X_revoked_list[i], level);
+        if(state_xs[i] != nullptr) {
+            // save the latest XMap state
+            memcpy(ST_X_cur, state_xs[i], DIGEST_SIZE);
+            // pre-search, derive all keys
+            compute_leaf_keys(keys, X_revoked_list[i], level);
+        }
         for (int j = counter_xs[i]; j >= 0; j--) {
             // compute the label for XMap
             uint8_t XA_ST[DIGEST_SIZE];
@@ -148,15 +152,19 @@ void VSDSSECQServer::search(vector<verify_t_tuple> &res_v, vector<uint8_t*> &res
     }
     // XSet is recovered
     // recover TSet for the search
-    // save the latest TMap state
+    // the latest TMap state
     uint8_t ST_T_cur[DIGEST_SIZE];
-    memcpy(ST_T_cur, state_t, DIGEST_SIZE);
     // the extracted TSet
     unordered_map<string, query_t_tuple> new_T, old_T, res_T;
     vector<string> del_T;
-    // pre-search, derive all keys
+    // SRE keys
     unordered_map<long, uint8_t*> keys;
-    compute_leaf_keys(keys, T_revoked_list, level);
+    if(state_t != nullptr) {
+        // save the latest TMap state
+        memcpy(ST_T_cur, state_t, DIGEST_SIZE);
+        // pre-search, derive all keys
+        compute_leaf_keys(keys, T_revoked_list, level);
+    }
     for (int i = counter_t; i >= 0; i--) {
         // compute the label for TMap
         uint8_t U_ST[DIGEST_SIZE];

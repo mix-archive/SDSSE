@@ -50,6 +50,7 @@ SDSSECQClient::SDSSECQClient() {
     FILE *sysParamFile = fopen("pairing.param", "r");
     e = new Pairing(sysParamFile);
     fclose(sysParamFile);
+    // try to load the saved group
     FILE  *saved_g = fopen("elliptic_g", "rw+");
     char s[8192];
     size_t count = fread(s, 1, 8192, saved_g);
@@ -62,7 +63,9 @@ SDSSECQClient::SDSSECQClient() {
         g = new GT(*e, old_g_in_bytes, sizeof(old_g_in_bytes));
         gpp = new GPP<GT>(*e, *g);
     } else {
+        // a new group is required
         g = new GT(*e, false);
+        gpp = new GPP<GT>(*e, *g);
         element_out_str(saved_g, 2, const_cast<element_s *>(g->getElement()));
     }
     fclose(saved_g);
@@ -204,8 +207,8 @@ void SDSSECQClient::update(OP op, const string& keyword, int ind) {
                   bit_xor<>());
         // generate xterm=g^(Fp(K_X, w)*xind*r-1)
         GT xterm = (*gpp)^(Fp((uint8_t*) keyword.c_str(), keyword.size(), K_X)
-                * xind
-                / Hp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE));
+                           * xind
+                           / Hp(ST_X[string((const char*) w_X, sizeof(w_X))], DIGEST_SIZE));
         // convert xterm to byte array
         uint8_t xterm_in_byte[element_length_in_bytes(const_cast<element_s *>(xterm.getElement()))];
         element_to_bytes(xterm_in_byte, const_cast<element_s *>(xterm.getElement()));
@@ -301,8 +304,8 @@ vector<int> SDSSECQClient::search(int count, ...) {
         // save the current counter
         int xterm_search_count = CT_X[xterm];
         // compute the token for XMap (xterm||1)
-        uint8_t pair_X[sterm.size() + sizeof(int)];
-        memset(pair_X, 0, sizeof(pair_X));
+        uint8_t pair_X[xterm.size() + sizeof(int)];
+        memset(pair_X, 1, sizeof(pair_X));
         memcpy(pair_X, xterm.c_str(), xterm.size());
         // generate the token PRF
         uint8_t token_X[DIGEST_SIZE];
@@ -326,8 +329,13 @@ vector<int> SDSSECQClient::search(int count, ...) {
         hmac_digest(w_X, sizeof(w_X), K, AES_BLOCK_SIZE, K_wx);
         K_wxs.push_back(K_wx);
         // get state and counter of the current xterm
-        state_xs.emplace_back(ST_X[string((const char*) w_X, sizeof(w_X))]);
-        count_xs.emplace_back(CX[string((const char*) w_X, sizeof(w_X))]);
+        if(CX.find(string((const char*) w_X, sizeof(w_X))) != CX.end()) {
+            state_xs.emplace_back(ST_X[string((const char*) w_X, sizeof(w_X))]);
+            count_xs.emplace_back(CX[string((const char*) w_X, sizeof(w_X))]);
+        } else {
+            state_xs.emplace_back(nullptr);
+            count_xs.emplace_back(-1);
+        }
     }
     for (int i = 0; i <= sterm_search_count; i++) {
         // w_T_i=w||0||i
@@ -336,42 +344,60 @@ vector<int> SDSSECQClient::search(int count, ...) {
         memset(w_T_i, 0, sterm.size() + 2 * sizeof(int));
         memcpy(w_T_i, sterm.c_str(), sterm.size());
         memcpy(w_T_i + sterm.size() + sizeof(int), (uint8_t*) &i, sizeof(int));
-        // get the update count
-        int sterm_update_count = CT[string((const char*)w_T_i, sizeof(w_T_i))];
         // compute the xtokens for this update
         vector<vector<GT>> token_i_j;
-        for (int j = 0; j <= sterm_update_count; j++) {
-            vector<GT> token_j;
-            for(const string& xterm : xterms) {
-                // compute z=Fp(K_Z, w||0||i||j)
-                uint8_t Z_w_T_i[sizeof(w_T_i) + sizeof(int)];
-                memcpy(Z_w_T_i, w_T_i, sizeof(w_T_i));
-                memcpy(Z_w_T_i + sizeof(w_T_i), &j, sizeof(int));
-                Zr z = Fp(Z_w_T_i, sizeof(Z_w_T_i), K_Z);
-                token_j.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
+        if(CT.find(string((const char*)w_T_i, sizeof(w_T_i))) != CT.end()) {
+            // get the update count
+            int sterm_update_count = CT[string((const char*) w_T_i, sizeof(w_T_i))];
+            for (int j = 0; j <= sterm_update_count; j++) {
+                vector<GT> token_j;
+                for(const string& xterm : xterms) {
+                    // compute z=Fp(K_Z, w||0||i||j)
+                    uint8_t Z_w_T_i[sizeof(w_T_i) + sizeof(int)];
+                    memcpy(Z_w_T_i, w_T_i, sizeof(w_T_i));
+                    memcpy(Z_w_T_i + sizeof(w_T_i), &j, sizeof(int));
+                    Zr z = Fp(Z_w_T_i, sizeof(Z_w_T_i), K_Z);
+                    token_j.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
+                }
+                token_i_j.emplace_back(token_j);
             }
-            token_i_j.emplace_back(token_j);
         }
         xtoken_list.emplace_back(token_i_j);
     }
     va_end(keyword_list);
     // send all tokens to the server and retrieve tuples
-    vector<uint8_t*> encrypted_res_list =
-            server->search(sterm_search_count, tree->get_level(), xterms.size(),
-                           K_wt,
-                           ST_T[string((const char*) w_T, sizeof(w_T))],CT[string((const char*) w_T, sizeof(w_T))],
-                           T_revoked_key_list,
-                           token_T_str,
-                           K_wxs,
-                           state_xs,count_xs,
-                           X_revoked_key_lists, xtoken_list,
-                           token_X_str_list);
+    vector<uint8_t*> encrypted_res_list;
+    if(CT.find(string((const char*) w_T, sizeof(w_T))) != CT.end()) {
+        // send all tokens to the server and retrieve tuples
+        server->search(encrypted_res_list,
+                       sterm_search_count, tree->get_level(), xterms.size(),
+                       K_wt,
+                       ST_T[string((const char*) w_T, sizeof(w_T))],CT[string((const char*) w_T, sizeof(w_T))],
+                       T_revoked_key_list,
+                       token_T_str,
+                       K_wxs,
+                       state_xs,count_xs,
+                       X_revoked_key_lists, xtoken_list,
+                       token_X_str_list);
+    } else {
+        server->search(encrypted_res_list,
+                       sterm_search_count, tree->get_level(), xterms.size(),
+                       K_wt,
+                       nullptr,-1,
+                       T_revoked_key_list,
+                       token_T_str,
+                       K_wxs,
+                       state_xs,count_xs,
+                       X_revoked_key_lists, xtoken_list,
+                       token_X_str_list);
+    }
+
     // decrypt e locally
     for (auto encyrpted_res : encrypted_res_list) {
         int ind;
         aes_decrypt(encyrpted_res + AES_BLOCK_SIZE, sizeof(int),
-                K_wt_2, encyrpted_res,
-                (uint8_t*)&ind);
+                    K_wt_2, encyrpted_res,
+                    (uint8_t*)&ind);
         res.push_back(ind);
     }
     return res;

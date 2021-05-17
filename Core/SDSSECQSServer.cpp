@@ -56,21 +56,26 @@ void SDSSECQSServer::add_entries_in_XMap(const string& label, const string& tag,
     xmap[label] = move(ciphertext_list);
 }
 
-vector<uint8_t*> SDSSECQSServer::search(int search_count, int level, int xterm_num,
+void SDSSECQSServer::search(vector<uint8_t*> &res_e,
+                                        int search_count, int level, int xterm_num,
                                        uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
                                        vector<uint8_t*>& k_wxs,  vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<Zr>& xt_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list) {
     // recover XSet for the search
     BloomFilter<128, XSET_SIZE, XSET_HASH> wxset;
     for(int i = 0; i < k_wxs.size(); i++) {
-        // save the latest XMap state
+        // the latest XMap state
         uint8_t ST_X_cur[DIGEST_SIZE];
-        memcpy(ST_X_cur, state_xs[i], DIGEST_SIZE);
         // the extracted XSet
         unordered_map<string, GT> new_X, old_X, res_X;
         vector<string> del_X;
-        // pre-search, derive all keys
+        // SRE keys
         unordered_map<long, uint8_t*> keys;
-        compute_leaf_keys(keys, X_revoked_list[i], level);
+        if(state_xs[i] != nullptr) {
+            // save the latest XMap state
+            memcpy(ST_X_cur, state_xs[i], DIGEST_SIZE);
+            // pre-search, derive all keys
+            compute_leaf_keys(keys, X_revoked_list[i], level);
+        }
         for (int j = counter_xs[i]; j >= 0; j--) {
             // compute the label for XMap
             uint8_t XA_ST[DIGEST_SIZE];
@@ -131,15 +136,19 @@ vector<uint8_t*> SDSSECQSServer::search(int search_count, int level, int xterm_n
     }
     // XSet is recovered
     // recover TSet for the search
-    // save the latest TMap state
+    // the latest TMap state
     uint8_t ST_T_cur[DIGEST_SIZE];
-    memcpy(ST_T_cur, state_t, DIGEST_SIZE);
     // the extracted TSet
     unordered_map<string, query_t_tuple> new_T, old_T, res_T;
     vector<string> del_T;
-    // pre-search, derive all keys
+    // SRE keys
     unordered_map<long, uint8_t*> keys;
-    compute_leaf_keys(keys, T_revoked_list, level);
+    if(state_t != nullptr) {
+        // save the latest TMap state
+        memcpy(ST_T_cur, state_t, DIGEST_SIZE);
+        // pre-search, derive all keys
+        compute_leaf_keys(keys, T_revoked_list, level);
+    }
     for (int i = counter_t; i >= 0; i--) {
         // compute the label for TMap
         uint8_t U_ST[DIGEST_SIZE];
@@ -192,7 +201,6 @@ vector<uint8_t*> SDSSECQSServer::search(int search_count, int level, int xterm_n
     cache_t[t_token] = res_T;
     // TSet is recovered
     // try to fetch the final result
-    vector<uint8_t*> res_list;
     for(const auto& it : res_T) {
         int counter = 0;
         // test whether the xtag exists or not
@@ -208,8 +216,7 @@ vector<uint8_t*> SDSSECQSServer::search(int search_count, int level, int xterm_n
         // contain all xterms, this is a result
         if(counter == xterm_num) {
             // copy the result into res
-            res_list.emplace_back(it.second.e_y);
+            res_e.emplace_back(it.second.e_y);
         }
     }
-    return res_list;
 }
