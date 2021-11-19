@@ -410,8 +410,8 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     }
     va_end(keyword_list);
     // send all tokens to the server and retrieve tuples
-    vector<uint8_t*> encrypted_res_list;
-    vector<verify_t_tuple> encrypted_verify_list;
+    vector<query_t_tuple*> encrypted_res_list;
+    vector<verify_t_tuple*> encrypted_verify_list;
     if(CT.find(string((const char*) w_T, sizeof(w_T))) != CT.end()) {
         server->search(encrypted_res_list, encrypted_verify_list,
                        sterm_search_count, tree->get_level(), xterms.size(),
@@ -442,10 +442,19 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     // all inds
     vector<int> v_list;
     // decrypt e locally
-    for (auto encyrpted_res : encrypted_res_list) {
+    for (auto encrypted_res : encrypted_res_list) {
         int ind;
-        aes_decrypt(encyrpted_res + AES_BLOCK_SIZE, sizeof(int),
-                K_wt_2, encyrpted_res,
+        // w_T = w||0||c_T
+        uint8_t key_w[sterm.size() + 2 * sizeof(int)];
+        // reset the buffer
+        memset(key_w, 0, sterm.size() + 2 * sizeof(int));
+        memcpy(key_w, sterm.c_str(), sterm.size());
+        memcpy(key_w + sterm.size() + sizeof(int), (uint8_t*) &encrypted_res->search_count, sizeof(int));
+        // generate the TMap key for sterm
+        hmac_digest(key_w, sizeof(key_w), K, AES_BLOCK_SIZE, K_wt);
+        K_wt_2 = K_wt + AES_BLOCK_SIZE;
+        aes_decrypt(encrypted_res->e_y + AES_BLOCK_SIZE, sizeof(int),
+                K_wt_2, encrypted_res->e_y,
                 (uint8_t*)&ind);
         // update h_t
         uint8_t new_hash[DIGEST_SIZE];
@@ -456,10 +465,10 @@ vector<int> VSDSSECQClient::search(int count, ...) {
                   bit_xor<>());
         res.push_back(ind);
     }
-    for (auto encyrpted_res : encrypted_verify_list) {
+    for (auto encrypted_res : encrypted_verify_list) {
         int ind;
-        aes_decrypt(encyrpted_res.e_y + AES_BLOCK_SIZE, sizeof(int),
-                    K_wt_2, encyrpted_res.e_y,
+        aes_decrypt(encrypted_res->res->e_y + AES_BLOCK_SIZE, sizeof(int),
+                    K_wt_2, encrypted_res->res->e_y,
                     (uint8_t*)&ind);
         // update h_t
         uint8_t new_hash[DIGEST_SIZE];
@@ -474,19 +483,18 @@ vector<int> VSDSSECQClient::search(int count, ...) {
     if(memcmp(h_t, h_T[sterm], DIGEST_SIZE) == 0) {
         for(int i = 0; i < v_list.size(); i++) {
             // get xtag
-            GT xtag = (*gpp) ^ (Fp((uint8_t *) xterms[encrypted_verify_list[i].k].c_str(), xterms[encrypted_verify_list[i].k].size(), K_X) * Fp((uint8_t*) &v_list[i], sizeof(int), K_I));
+            GT xtag = (*gpp) ^ (Fp((uint8_t *) xterms[encrypted_verify_list[i]->k].c_str(), xterms[encrypted_verify_list[i]->k].size(), K_X) * Fp((uint8_t*) &v_list[i], sizeof(int), K_I));
             uint8_t xtag_in_byte[element_length_in_bytes(const_cast<element_s *>(xtag.getElement()))];
             element_to_bytes(xtag_in_byte, const_cast<element_s *>(xtag.getElement()));
             hash_to_prime(&xtag_hash, xtag_in_byte, sizeof(xtag_in_byte));
-
-            mpz_mul(ver, encrypted_verify_list[i].a, xtag_hash);
-            mpz_addmul(ver, encrypted_verify_list[i].b, acc);
+            mpz_mul(ver, encrypted_verify_list[i]->a, xtag_hash);
+            mpz_addmul(ver, encrypted_verify_list[i]->b, acc);
             if(mpz_cmp_ui(ver, 1) != 0) {
                 cout << "REJECT: Delete extra file " << v_list[i] << " detected" << endl;
             }
             // mpz clear up
-            mpz_clear(encrypted_verify_list[i].a);
-            mpz_clear(encrypted_verify_list[i].b);
+            mpz_clear(encrypted_verify_list[i]->a);
+            mpz_clear(encrypted_verify_list[i]->b);
         }
     } else {    // this result is invalid, return an empty one instead
         cout << "REJECT: TSet has been tampered with, all results are rejected" << endl;

@@ -366,7 +366,7 @@ vector<int> SDSSECQClient::search(int count, ...) {
     }
     va_end(keyword_list);
     // send all tokens to the server and retrieve tuples
-    vector<uint8_t*> encrypted_res_list;
+    vector<query_t_tuple*> encrypted_res_list;
     if(CT.find(string((const char*) w_T, sizeof(w_T))) != CT.end()) {
         // send all tokens to the server and retrieve tuples
         server->search(encrypted_res_list,
@@ -393,10 +393,19 @@ vector<int> SDSSECQClient::search(int count, ...) {
     }
 
     // decrypt e locally
-    for (auto encyrpted_res : encrypted_res_list) {
+    for (auto encrypted_res : encrypted_res_list) {
         int ind;
-        aes_decrypt(encyrpted_res + AES_BLOCK_SIZE, sizeof(int),
-                    K_wt_2, encyrpted_res,
+        // w_T = w||0||c_T
+        uint8_t key_w[sterm.size() + 2 * sizeof(int)];
+        // reset the buffer
+        memset(key_w, 0, sterm.size() + 2 * sizeof(int));
+        memcpy(key_w, sterm.c_str(), sterm.size());
+        memcpy(key_w + sterm.size() + sizeof(int), (uint8_t*) &encrypted_res->search_count, sizeof(int));
+        // generate the TMap key for sterm
+        hmac_digest(key_w, sizeof(key_w), K, AES_BLOCK_SIZE, K_wt);
+        K_wt_2 = K_wt + AES_BLOCK_SIZE;
+        aes_decrypt(encrypted_res->e_y + AES_BLOCK_SIZE, sizeof(int),
+                    K_wt_2, encrypted_res->e_y,
                     (uint8_t*)&ind);
         res.push_back(ind);
     }

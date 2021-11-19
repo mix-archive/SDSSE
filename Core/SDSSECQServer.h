@@ -52,7 +52,7 @@ public:
     explicit SDSSECQServer(Pairing *e);
     void add_entries_in_TMap(const string& label, const string& tag, const string& st, vector<string>& ciphertext_list);
     void add_entries_in_XMap(const string& label, const string& tag, const string& st, vector<string>& ciphertext_list);
-    void search(vector<uint8_t*> &res_e,
+    void search(vector<query_t_tuple*> &res_e,
                             int search_count, int level, int xterm_num,
                             uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
                             vector<uint8_t*>& k_wxs, vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list);

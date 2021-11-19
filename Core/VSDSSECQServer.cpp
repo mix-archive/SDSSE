@@ -56,7 +56,7 @@ void VSDSSECQServer::add_entries_in_XMap(const string& label, const string& tag,
     xmap[label] = move(ciphertext_list);
 }
 
-void VSDSSECQServer::search(vector<uint8_t*> &res_e, vector<verify_t_tuple> &res_v,
+void VSDSSECQServer::search(vector<query_t_tuple*> &res_e, vector<verify_t_tuple*> &res_v,
                                         int search_count, int level, int xterm_num,
                                         uint8_t *k_wt, uint8_t *state_t, int counter_t, vector<GGMNode>& T_revoked_list, const string& t_token,
                                         vector<uint8_t*>& k_wxs,  vector<uint8_t*>& state_xs, vector<int>& counter_xs, vector<vector<GGMNode>>& X_revoked_list, vector<vector<vector<GT>>>& xtoken_list, vector<string>& x_token_list) {
@@ -238,15 +238,15 @@ void VSDSSECQServer::search(vector<uint8_t*> &res_e, vector<verify_t_tuple> &res
                 tuple.k = i;
                 mpz_init_set(tuple.a, a);
                 mpz_init_set(tuple.b, b);
-                tuple.e_y = it.second.e_y;
-                res_v.emplace_back(tuple);
+                tuple.res = (query_t_tuple*) &it.second;
+                res_v.emplace_back((verify_t_tuple*) &tuple);
                 break;
             }
         }
         // contain all xterms, this is a result
         if(counter == xterm_num) {
             // copy the result into res
-            res_e.emplace_back(it.second.e_y);
+            res_e.emplace_back((query_t_tuple*) &it.second);
         }
     }
     // mpz clear up
