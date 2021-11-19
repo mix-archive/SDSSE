@@ -144,10 +144,11 @@ void SDSSECQClient::update(OP op, const string& keyword, int ind) {
         uint8_t y_in_byte[element_length_in_bytes(const_cast<element_s *>(y.getElement()))];
         element_to_bytes(y_in_byte, const_cast<element_s *>(y.getElement()));
         // 2. assign the array for the concatenation
-        uint8_t ey[sizeof(encrypted_id) + sizeof(y_in_byte)];
+        uint8_t eyc[sizeof(encrypted_id) + sizeof(y_in_byte) + sizeof(int)];
         // 3. copy into the array
-        memcpy(ey, encrypted_id, sizeof(encrypted_id));
-        memcpy(ey + sizeof(encrypted_id), y_in_byte, sizeof(y_in_byte));
+        memcpy(eyc, encrypted_id, sizeof(encrypted_id));
+        memcpy(eyc + sizeof(encrypted_id), y_in_byte, sizeof(y_in_byte));
+        memcpy(eyc + sizeof(encrypted_id) + sizeof(y_in_byte), &CT[string((const char*) w_T, sizeof(w_T))], sizeof(int));
         // get all offsets in BF
         vector<long> indexes = BloomFilter<DIGEST_SIZE, GGM_SIZE, HASH_SIZE>::get_index(tag);
         sort(indexes.begin(), indexes.end());
@@ -159,13 +160,13 @@ void SDSSECQClient::update(OP op, const string& keyword, int ind) {
             memcpy(derived_key, sk_T, AES_BLOCK_SIZE);
             GGMTree::derive_key_from_tree(derived_key, index, tree->get_level(), 0);
             // use the key to encrypt e||y
-            uint8_t encrypted_ey[AES_BLOCK_SIZE + sizeof(ey)];
-            memcpy(encrypted_ey, iv, AES_BLOCK_SIZE);
-            aes_encrypt(ey, sizeof(ey),
-                        derived_key, encrypted_ey,
-                        encrypted_ey + AES_BLOCK_SIZE);
+            uint8_t encrypted_eyc[AES_BLOCK_SIZE + sizeof(eyc)];
+            memcpy(encrypted_eyc, iv, AES_BLOCK_SIZE);
+            aes_encrypt(eyc, sizeof(eyc),
+                        derived_key, encrypted_eyc,
+                        encrypted_eyc + AES_BLOCK_SIZE);
             // save the encrypted e||y in the list
-            tuple_list.emplace_back(string((char*) encrypted_ey, sizeof(encrypted_ey)));
+            tuple_list.emplace_back(string((char*) encrypted_eyc, sizeof(encrypted_eyc)));
         }
         // convert tag/label to string
         string tag_str((char*) tag, DIGEST_SIZE);
