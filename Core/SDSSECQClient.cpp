@@ -124,6 +124,7 @@ vector<int> SDSSECQClient::search(int count, ...) {
         vector<GT> token_i;
         // compute z=Fp(K_Z, w||i)
         Zr z = Fp(w_i, sizeof(w_i), K_Z);
+        token_i.reserve(xterms.size());
         for(const string& xterm : xterms) {
             token_i.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
         }
@@ -133,7 +134,7 @@ vector<int> SDSSECQClient::search(int count, ...) {
 
     // invoke search (server part)
     // 1. query TEDB for TSets
-    vector<string> Res_T = TEDB->search(sterm);
+    auto Res_T = TEDB->search(sterm);
     if(Res_T.empty()) {
         return {};
     }
@@ -141,7 +142,7 @@ vector<int> SDSSECQClient::search(int count, ...) {
     // 2. query XEDB for XSets
     BloomFilter<128, XSET_SIZE, XSET_HASH> Res_X;
     for(const string& xterm : xterms) {
-        vector<string> Res_xtags = XEDB->search(xterm);
+        auto Res_xtags = XEDB->search(xterm);
         // if any of the xterm cannot be found, search end, no conjunction
         if(Res_xtags.empty()) {
             return {};
@@ -157,7 +158,7 @@ vector<int> SDSSECQClient::search(int count, ...) {
         auto flag = true;
         Zr y = Zr(*e, t_tuple.c_str() + AES_BLOCK_SIZE + sizeof(int), 20);
         for(int j = 1; j < count; j++) {
-            GT tag = xtoken_list[*(int*)(t_tuple.c_str() + AES_BLOCK_SIZE + sizeof(int) + 20)][j - 1] ^ y;
+            auto tag = xtoken_list[*(int*)(t_tuple.c_str() + AES_BLOCK_SIZE + sizeof(int) + 20)][j - 1] ^ y;
             if(!Res_X.might_contain((uint8_t*) tag.toString().c_str())) {
                 flag = false;
                 break;

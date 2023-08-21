@@ -29,8 +29,9 @@ private:
     unordered_map<string, string> tags;
     unordered_map<string, vector<string>> dict;
     unordered_map<long, uint8_t*> keys;
+    unordered_map<long, long> root_key_map;
 
-    void compute_leaf_keys(const vector<GGMNode>& node_list, int level);
+    void compute_leaf_key_maps(const vector<GGMNode>& node_list, int level);
 public:
     SSEServerHandler();
     void add_entries(const string& label, const string& tag, vector<string> ciphertext_list);
