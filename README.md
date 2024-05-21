@@ -42,3 +42,15 @@ If you experience runtime errors, indicating that the libpbc cannot be found in 
 echo $LD_LIBRARY_PATH
 ```
 to ensure the path `usr/local/lib` is in that enviroment variable. You may need to manually add it in if there is no such path inside and meet the corresponding runtime error.
+
+## Parameters
+As mentioned, the current implementation is a proof-of-concept prototype.To evaluate the proposed protocol, we also implement two test programs to generate synthesis datasets and run our proposed DSSE protocol over them.
+
+### Dataset Size
+The source code of those test programs can be found in the root path of the project, namely `SDSSECQ.cpp` and `SDSSECQS.cpp`. The code in this repository inserts 1000 files with two keywords "Alice" and "Bob", deletes 100 files (10% deletion), and then executes the conjunctive query ("Alice" AND "Bob"). To enlarge the size of dataset, one can modify the above two files by increasing the numbers of insertions/deletions or adding more keywords. 
+
+Besides, as the number of keyword-id pairs increases, we should use a larger Bloom filter to keep the XSet for conjunctive queries. Hence, the `XSET_SIZE` and `XSET_HASH` in `Util
+/CommonUtil.h` should be updated accordingly. Note that the current parameters `XSET_SIZE=2875518` and `XSET_HASH=20` can support conjunctive queries against a dataset with 100k keyword-id pairs with less than 10^-7 false positive rate. We would refer our readers to [here](https://hur.st/bloomfilter/) to compute the new Bloom filter parameters as required.
+
+### Deletion
+Since the deletion is also based on Bloom filter, there are another two Bloom filter parameters, i.e., `GGM_SIZE` and `HASH_SIZE` to be set with the increasing number of deletion operations. The current parameters are `GGM_SIZE=579521` and `HASH_SIZE=5`, which are sufficient for 100 deletions (with only 10^-21 false positive rate) in the test code. Please also update these two parameters when the number of deletion increases by referring to the above Bloom filter calculator.
