@@ -1,7 +1,3 @@
-//
-// Created by shangqi on 2021/4/20.
-//
-
 #ifndef FBDSSE_SDSSECQCLIENT_H
 #define FBDSSE_SDSSECQCLIENT_H
 

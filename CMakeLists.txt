@@ -23,13 +23,13 @@ ADD_LIBRARY(PBC STATIC
 TARGET_LINK_LIBRARIES(PBC -lgmp -lpbc)
 
 # set executable outputs
-ADD_EXECUTABLE(AESTest Test/AESTest.cpp Util/CommonUtil.c Test/SSETest.cpp)
+ADD_EXECUTABLE(AESTest Test/AESTest.cpp Util/CommonUtil.c)
 ADD_EXECUTABLE(BloomFilterTest Test/BloomFilterTest.cpp BF/Hash/SpookyV2.cpp)
 ADD_EXECUTABLE(GGMTest Test/GGMTest.cpp GGM/GGMTree.cpp Util/CommonUtil.c)
 ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
 add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
-add_executable(VSDSSECQ VSDSSECQ.cpp Core/VSDSSECQClient.cpp Core/VSDSSECQServer.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
+add_executable(VSDSSECQ GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
 
 # link
 TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)

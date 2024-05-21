@@ -1,7 +1,3 @@
-//
-// Created by shangqi on 2021/4/20.
-//
-
 #include "SDSSECQClient.h"
 
 Zr SDSSECQClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
