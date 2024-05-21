@@ -29,12 +29,9 @@ ADD_EXECUTABLE(GGMTest Test/GGMTest.cpp GGM/GGMTree.cpp Util/CommonUtil.c)
 ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
 add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
-add_executable(VSDSSECQ GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
-
 # link
 TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SSETest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBC)
 TARGET_LINK_LIBRARIES(SDSSECQS OpenSSL::Crypto PBC)
-TARGET_LINK_LIBRARIES(VSDSSECQ OpenSSL::Crypto PBC)

@@ -19,9 +19,9 @@ int main() {
     }
     cout << duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() << endl;
     vector<int> results = client.search(2, "alice", "bob");
-    for (int res : results) {
-        cout << res << endl;
-    }
+//    for (int res : results) {
+//        cout << res << endl;
+//    }
     cout << duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() << endl;
     return 0;
 }
