@@ -114,42 +114,44 @@ vector<int> SDSSECQSClient::search(int count, ...) {
     }
     // read all xterms
     vector<string> xterms;
-    for (int i = 1; i < count; i++) {
-        xterms.emplace_back(va_arg(keyword_list, char*));
-    }
-    // compute wxtokens
-    for (int i = 0; i <= CT[sterm]; i++) {
-        // w_i=w||i
-        uint8_t w_i[sterm.size() + sizeof(int)];
-        // reset the buffer
-        memset(w_i, 0, sterm.size() + sizeof(int));
-        memcpy(w_i, sterm.c_str(), sterm.size());
-        memcpy(w_i + sterm.size(), (uint8_t*) &i, sizeof(int));
-        // compute the xtokens for this update
-        vector<GT> token_i;
-        // compute z=Fp(K_Z, w||i)
-        Zr z = Fp(w_i, sizeof(w_i), K_Z);
-        for(const string& xterm : xterms) {
-            token_i.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)
-                                                * Fp((uint8_t*) sterm.c_str(), sterm.size(), K_z)));
-            // if xterm is never inserted, return an empty vector
-            if(CT.find(xterm) == CT.end()) {
-                return {};
-            }
-            vector<Zr> zx_i;
-            for(int k = 0; k <= CT[xterm]; k++) {
-                // w_j=w||j
-                uint8_t w_j[xterm.size() + sizeof(int)];
-                // reset the buffer
-                memset(w_j, 0, xterm.size() + sizeof(int));
-                memcpy(w_j, xterm.c_str(), xterm.size());
-                memcpy(w_j + xterm.size(), (uint8_t*) &k, sizeof(int));
-                zx_i.emplace_back(Fp(w_j, sizeof(w_j), K_x)
-                                    * Fp((uint8_t *) sterm.c_str(), sterm.size(), K_z));
-            }
-            zxtoken_list.emplace_back(zx_i);
+    if(count > 1) {
+        for (int i = 1; i < count; i++) {
+            xterms.emplace_back(va_arg(keyword_list, char*));
         }
-        wxtoken_list.emplace_back(token_i);
+        // compute wxtokens
+        for (int i = 0; i <= CT[sterm]; i++) {
+            // w_i=w||i
+            uint8_t w_i[sterm.size() + sizeof(int)];
+            // reset the buffer
+            memset(w_i, 0, sterm.size() + sizeof(int));
+            memcpy(w_i, sterm.c_str(), sterm.size());
+            memcpy(w_i + sterm.size(), (uint8_t *) &i, sizeof(int));
+            // compute the xtokens for this update
+            vector<GT> token_i;
+            // compute z=Fp(K_Z, w||i)
+            Zr z = Fp(w_i, sizeof(w_i), K_Z);
+            for (const string &xterm: xterms) {
+                token_i.emplace_back((*gpp) ^ (z * Fp((uint8_t *) xterm.c_str(), xterm.size(), K_X)
+                                               * Fp((uint8_t *) sterm.c_str(), sterm.size(), K_z)));
+                // if xterm is never inserted, return an empty vector
+                if (CT.find(xterm) == CT.end()) {
+                    return {};
+                }
+                vector<Zr> zx_i;
+                for (int k = 0; k <= CT[xterm]; k++) {
+                    // w_j=w||j
+                    uint8_t w_j[xterm.size() + sizeof(int)];
+                    // reset the buffer
+                    memset(w_j, 0, xterm.size() + sizeof(int));
+                    memcpy(w_j, xterm.c_str(), xterm.size());
+                    memcpy(w_j + xterm.size(), (uint8_t *) &k, sizeof(int));
+                    zx_i.emplace_back(Fp(w_j, sizeof(w_j), K_x)
+                                      * Fp((uint8_t *) sterm.c_str(), sterm.size(), K_z));
+                }
+                zxtoken_list.emplace_back(zx_i);
+            }
+            wxtoken_list.emplace_back(token_i);
+        }
     }
     va_end(keyword_list);
 

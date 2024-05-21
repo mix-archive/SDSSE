@@ -107,28 +107,31 @@ vector<int> SDSSECQClient::search(int count, ...) {
     if (CT.find(sterm) == CT.end()) {
         return {};
     }
-    // read all xterms
+
     vector<string> xterms;
-    for (int i = 1; i < count; i++) {
-        xterms.emplace_back(va_arg(keyword_list, char*));
-    }
-    // compute xtokens
-    for (int i = 0; i <= CT[sterm]; i++) {
-        // w_i=w||i
-        uint8_t w_i[sterm.size() + sizeof(int)];
-        // reset the buffer
-        memset(w_i, 0, sterm.size() + sizeof(int));
-        memcpy(w_i, sterm.c_str(), sterm.size());
-        memcpy(w_i + sterm.size(), (uint8_t*) &i, sizeof(int));
-        // compute the xtokens for this update
-        vector<GT> token_i;
-        // compute z=Fp(K_Z, w||i)
-        Zr z = Fp(w_i, sizeof(w_i), K_Z);
-        token_i.reserve(xterms.size());
-        for(const string& xterm : xterms) {
-            token_i.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
+    if(count > 1) {
+        // read all xterms
+        for (int i = 1; i < count; i++) {
+            xterms.emplace_back(va_arg(keyword_list, char*));
         }
-        xtoken_list.emplace_back(token_i);
+        // compute xtokens
+        for (int i = 0; i <= CT[sterm]; i++) {
+            // w_i=w||i
+            uint8_t w_i[sterm.size() + sizeof(int)];
+            // reset the buffer
+            memset(w_i, 0, sterm.size() + sizeof(int));
+            memcpy(w_i, sterm.c_str(), sterm.size());
+            memcpy(w_i + sterm.size(), (uint8_t*) &i, sizeof(int));
+            // compute the xtokens for this update
+            vector<GT> token_i;
+            // compute z=Fp(K_Z, w||i)
+            Zr z = Fp(w_i, sizeof(w_i), K_Z);
+            token_i.reserve(xterms.size());
+            for(const string& xterm : xterms) {
+                token_i.emplace_back((*gpp) ^ (z * Fp((uint8_t*) xterm.c_str(), xterm.size(), K_X)));
+            }
+            xtoken_list.emplace_back(token_i);
+        }
     }
     va_end(keyword_list);
 
