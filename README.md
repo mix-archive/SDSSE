@@ -6,7 +6,7 @@ This repository contains the implementation of SDSSE, the Dynamic Searchable Sym
 
 * Git
 * Ubuntu version >= 16.04
-* gcc/g++ verison>=-5 (5.4.0 in ubuntu 16.04)
+* gcc/g++ version>=-5 (5.4.0 in ubuntu 16.04)
 * cmake >= 3.17
 * openssl version >= 1.1.0h
 * The Pairing-Based Cryptography Library (PBC) version 0.5.14
