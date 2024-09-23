@@ -1,0 +1,29 @@
+x-defaults: &default
+  restart: unless-stopped
+  # Build from the Dockfile in the current path
+  build: .
+  volumes:
+    # mount the source code folder
+    - ..:/home/deploy/SDSSE/
+    - /tmp:/tmp
+
+services:
+  projects-dev:
+    <<: *default
+    container_name: SDSSE-dev
+    hostname: "SDSSE"
+    # Set username and work dir
+    user: deploy
+    working_dir: /home/deploy/SDSSE
+    # Enable GDB server to run
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_PTRACE
+    # Start ssh service
+    # Use tail -f to run the container in the background
+    command:
+      bash -c "sudo service ssh restart && tail -f /dev/null"
+    # Map 22 to 2222 in local machine
+    ports:
+      - "127.0.0.1:3333:22"
