@@ -9,7 +9,6 @@ Requested Badge: **Reproduced**
 ## Description
 This repository contains the implementation of SDSSE, the Dynamic Searchable Symmetric Encryption (DSSE) schemes (SDSSE-CQ and SDSSE-CQ-S) we proposed in the PETS submission "Searchable Encryption for Conjunctive Queries with Extended Forward and Backward Privacy".
 The proposed scheme aims to enable conjunctive queries over DSSE schemes with Forward/Backward privacy gurantees.
-Instead, we provide a guidance on how to set the parameters to run this code towards various input sizes.
 
 ### Security/Privacy Issues and Ethical Concerns
 
