@@ -21,11 +21,11 @@ The artifact will not lead to ethical concerns because:
 ## Environment
 
 ### Accessibility
-Our code is available in GitHub. Please access the code via this link.
+Our code is available in GitHub. Please access the code via this [link](https://github.com/MonashCybersecurityLab/SDSSE).
 
 You may use the following command to pull the code to your local machine:
 ```bash
-git clone 
+git clone https://github.com/MonashCybersecurityLab/SDSSE.git
 ```
 
 ### Set up the environment
@@ -60,10 +60,6 @@ After building the container, use the following command to connect to the contai
 docker exec -it SDSSE-dev sh
 ```
 The source code will be mapped to the path `~/SDSSE` inside the container.
-
-Describe how the reviewers should set up the environment for your artifact, including downloading and installing dependencies and the installation of the artifact itself.
-Be as specific as possible here.
-If possible, use code segments to simply the workflow, e.g.,
 
 **Option 2: Use a Physical Machine**
 
