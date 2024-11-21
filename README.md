@@ -95,7 +95,7 @@ If you experience runtime errors, indicating that the libpbc cannot be found in 
 ```bash
 echo $LD_LIBRARY_PATH
 ```
-to ensure the path `usr/local/lib` is in that enviroment variable. You may need to manually add it in if there is no such path inside and meet the corresponding runtime error.
+to ensure the path `usr/local/lib` is in that environment variable. You may need to manually add it in if there is no such path inside and meet the corresponding runtime error.
 
 ## Artifact Evaluation
 
@@ -103,7 +103,8 @@ to ensure the path `usr/local/lib` is in that enviroment variable. You may need 
 As mentioned, the current implementation is a proof-of-concept prototype.To evaluate the proposed protocol, we also implement two test programs to generate synthesis datasets and run our proposed DSSE protocol over them.
 
 #### Dataset Size
-The source code of those test programs can be found in the root path of the project, namely `SDSSECQ.cpp` and `SDSSECQS.cpp`. The code in this repository inserts 1000 files with two keywords "Alice" and "Bob", deletes 100 files (10% deletion), and then executes the conjunctive query ("Alice" AND "Bob"). To enlarge the size of dataset, one can modify the above two files by increasing the numbers of insertions/deletions or adding more keywords.
+The source code of those test programs can be found in the root path of the project, namely `SDSSECQ.cpp` and `SDSSECQS.cpp`. The code in this repository inserts files with two keywords "Alice" and "Bob", deletes specific amount of the inserted files, and then executes one single keyword query ("Alice") and a conjunctive query ("Alice" AND "Bob").
+The parameters used to specify the number of insertions/deletions are set as program arguments when running those programs as shown in the above section.
 
 Besides, as the number of keyword-id pairs increases, we should use a larger Bloom filter to keep the XSet for conjunctive queries. Hence, the `MAX_DB_SIZE`, `XSET_FP`, and `XSET_HASH` in `Util
 /CommonUtil.h` should be updated accordingly. Note that the current parameters `MAX_DB_SIZE=100000`, `XSET_FP=0.0000001` and `XSET_HASH=20` can support conjunctive queries against a dataset with 100k keyword-id pairs with less than 10^-7 false positive rate. 
@@ -113,6 +114,14 @@ Since the deletion is also based on Bloom filter, there are another two Bloom fi
 The current parameters are `GGM_FP=0.0001` and `HASH_SIZE=5`, which is designed to achieve 10^-4 false positive rate with the 5 hash functions in the test code. Please also update these two parameters if you are looking for a smaller false positive rate or GGM tree size (more hash functions lead to a smaller tree).
 
 ### Main Results and Claims
+
+#### Automatic Benchmarking Script
+We provide a script for automatic benchmarking.
+The script can be executed with the following command under the `Data` folder:
+```bash
+./Evaluation
+```
+It will automatically execute required commands to reproduce the following results.
 
 #### Main Result 1: Constant and Small Time For Insertion/Deletion
 As shown in `Table 3`, after fixing the parameter, the insertion time and deletion time for each `(keyword, id)` is a constant.
