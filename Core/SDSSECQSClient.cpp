@@ -158,6 +158,8 @@ vector<int> SDSSECQSClient::search(int count, ...) {
         return {};
     }
 
+    // use a constant DB size
+    int XSET_SIZE = get_BF_size(XSET_HASH, MAX_DB_SIZE, XSET_FP);
     // 2. query XEDB for XSets
     BloomFilter<128, XSET_HASH> Res_WX(XSET_SIZE);
     for(int j = 1; j < count; j++) {
