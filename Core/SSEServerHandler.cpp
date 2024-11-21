@@ -45,7 +45,7 @@ vector<string> SSEServerHandler::search(uint8_t *token, const vector<GGMNode>& n
                                    derive_key, (uint8_t *) ciphertext_list[i].c_str(),
                         res);
             if(size > 0) {
-                res_list.emplace_back(string(reinterpret_cast<const char *>(res), ciphertext_list[i].size() - AES_BLOCK_SIZE));
+                res_list.emplace_back(reinterpret_cast<const char *>(res), ciphertext_list[i].size() - AES_BLOCK_SIZE);
             }
             break;
         }

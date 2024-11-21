@@ -77,6 +77,7 @@ vector<string> SSEClientHandler::search(const string& keyword) {
                 token);
     // search all deleted positions
     vector<long> bf_pos;
+    bf_pos.reserve(GGM_SIZE);
     for (int i = 0; i < GGM_SIZE; ++i) {
         bf_pos.emplace_back(i);
     }
@@ -89,7 +90,7 @@ vector<string> SSEClientHandler::search(const string& keyword) {
     vector<GGMNode> node_list;
     node_list.reserve(remain_pos.size());
     for (long pos : remain_pos) {
-        node_list.emplace_back(GGMNode(pos, tree->get_level()));
+        node_list.emplace_back(pos, tree->get_level());
     }
     vector<GGMNode> remain_node = tree->min_coverage(node_list);
     // compute the key set and send to the server
