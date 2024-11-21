@@ -26,10 +26,11 @@ private:
     unordered_map<string, vector<string>> dict;
     unordered_map<long, uint8_t*> keys;
     unordered_map<long, long> root_key_map;
+    int GGM_SIZE;
 
     void compute_leaf_key_maps(const vector<GGMNode>& node_list, int level);
 public:
-    SSEServerHandler();
+    explicit SSEServerHandler(int GGM_SIZE);
     void add_entries(const string& label, const string& tag, vector<string> ciphertext_list);
     vector<string> search(uint8_t *token, const vector<GGMNode>& node_list, int level);
 };

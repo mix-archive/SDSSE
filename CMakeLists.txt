@@ -24,11 +24,11 @@ TARGET_LINK_LIBRARIES(PBC -lgmp -lpbc)
 
 # set executable outputs
 ADD_EXECUTABLE(AESTest Test/AESTest.cpp Util/CommonUtil.c)
-ADD_EXECUTABLE(BloomFilterTest Test/BloomFilterTest.cpp BF/Hash/SpookyV2.cpp)
+ADD_EXECUTABLE(BloomFilterTest Test/BloomFilterTest.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp)
 ADD_EXECUTABLE(GGMTest Test/GGMTest.cpp GGM/GGMTree.cpp Util/CommonUtil.c)
-ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c)
-add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
-add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
+ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c)
+add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
+add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 # link
 TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)

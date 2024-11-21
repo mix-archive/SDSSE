@@ -9,7 +9,7 @@ Zr SDSSECQClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
     return Zr(*e, (void*) PRF, DIGEST_SIZE);
 }
 
-SDSSECQClient::SDSSECQClient() {
+SDSSECQClient::SDSSECQClient(int del_size) {
     // generate or load pairing
     FILE *sysParamFile = fopen("pairing.param", "r");
     e = new Pairing(sysParamFile);
@@ -35,8 +35,8 @@ SDSSECQClient::SDSSECQClient() {
     fclose(saved_g);
 
     // initialise SSE instance
-    TEDB = new SSEClientHandler();
-    XEDB = new SSEClientHandler();
+    TEDB = new SSEClientHandler(del_size);
+    XEDB = new SSEClientHandler(del_size);
 }
 
 void SDSSECQClient::update(OP op, const string& keyword, int ind) {
@@ -138,8 +138,10 @@ vector<int> SDSSECQClient::search(int count, ...) {
         return {};
     }
 
+    // use a constant DB size
+    int XSET_SIZE = get_BF_size(XSET_HASH, MAX_DB_SIZE, XSET_FP);
     // 2. query XEDB for XSets
-    BloomFilter<128, XSET_SIZE, XSET_HASH> Res_X;
+    BloomFilter<128, XSET_HASH> Res_X(XSET_SIZE);
     for(const string& xterm : xterms) {
         auto Res_xtags = XEDB->search(xterm);
         // if any of the xterm cannot be found, search end, no conjunction

@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     int w2_size = atoi(argv[2]);
     int del_size = atoi(argv[3]);
 
-    SDSSECQClient client;
+    SDSSECQClient client(del_size);
 
     auto start = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
     for (int i = 0; i < w1_size; ++i) {

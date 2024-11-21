@@ -1,13 +1,16 @@
 #include "SSEClientHandler.h"
 
-SSEClientHandler::SSEClientHandler() {
-    server = new SSEServerHandler();
+SSEClientHandler::SSEClientHandler(int del_size) {
+    this->GGM_SIZE = get_BF_size(HASH_SIZE, del_size, GGM_FP);
+    this->delete_bf = new BloomFilter<32, HASH_SIZE>(GGM_SIZE);
     // init the GGM Tree
     tree = new GGMTree(GGM_SIZE);
+
+    server = new SSEServerHandler(GGM_SIZE);
 }
 
 SSEClientHandler::~SSEClientHandler() {
-    delete_bf.reset();
+    delete_bf->reset();
     delete server;
 }
 
@@ -22,7 +25,7 @@ void SSEClientHandler::update(OP op, const string& keyword, int ind, uint8_t* co
     // process the operator
     if(op == INS) {
         // get all offsets in BF
-        vector<long> indexes = BloomFilter<32, GGM_SIZE, HASH_SIZE>::get_index(tag);
+        vector<long> indexes = BloomFilter<32, HASH_SIZE>::get_index(tag, GGM_SIZE);
         sort(indexes.begin(), indexes.end());
 
         // get SRE ciphertext list
@@ -61,7 +64,7 @@ void SSEClientHandler::update(OP op, const string& keyword, int ind, uint8_t* co
         server->add_entries(label_str, tag_str, ciphertext_list);
     } else {
         // insert the tag into BF
-        delete_bf.add_tag(tag);
+        delete_bf->add_tag(tag);
     }
 }
 
@@ -77,7 +80,7 @@ vector<string> SSEClientHandler::search(const string& keyword) {
     for (int i = 0; i < GGM_SIZE; ++i) {
         bf_pos.emplace_back(i);
     }
-    vector<long> delete_pos = delete_bf.search();
+    vector<long> delete_pos = delete_bf->search();
     vector<long> remain_pos;
     set_difference(bf_pos.begin(), bf_pos.end(),
                    delete_pos.begin(), delete_pos.end(),

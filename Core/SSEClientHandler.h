@@ -1,7 +1,6 @@
 #ifndef AURA_SSECLIENTHANDLER_H
 #define AURA_SSECLIENTHANDLER_H
 
-#include "GGMTree.h"
 #include "Core/SSEServerHandler.h"
 
 enum OP {
@@ -14,12 +13,13 @@ private:
     uint8_t *iv = (unsigned char*) "0123456789123456";
 
     GGMTree *tree;
-    BloomFilter<32, GGM_SIZE, HASH_SIZE> delete_bf;
+    int GGM_SIZE;
+    BloomFilter<32, HASH_SIZE> *delete_bf;
     unordered_map<string, int> C;       // search time
 
     SSEServerHandler *server;
 public:
-    SSEClientHandler();
+    SSEClientHandler(int del_size);
     ~SSEClientHandler();
     void update(OP op, const string& keyword, int ind, uint8_t* content, size_t content_len);
     vector<string> search(const string& keyword);

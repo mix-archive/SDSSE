@@ -2,8 +2,11 @@
 
 #include "../BF/BloomFilter.h"
 
+
 int main() {
-    BloomFilter<1, 1000000, 20> bf;
+    auto BF_size = get_BF_size(20, 3);
+
+    BloomFilter<1, 20> bf(BF_size);
 
     uint8_t tag1 = 1;
     uint8_t tag2 = 2;

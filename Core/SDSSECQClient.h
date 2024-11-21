@@ -20,8 +20,8 @@ private:
     GPP<GT> *gpp;
 
     // SSE Instance
-    SSEClientHandler *TEDB;
-    SSEClientHandler *XEDB;
+    SSEClientHandler *TEDB{};
+    SSEClientHandler *XEDB{};
 
     // state map
     unordered_map<string, int> CT;
@@ -29,7 +29,7 @@ private:
     Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
-    SDSSECQClient();
+    explicit SDSSECQClient(int del_size);
     void update(OP op, const string& keyword, int ind);
     vector<int> search(int count, ...);
 };
