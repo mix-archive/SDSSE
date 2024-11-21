@@ -29,7 +29,7 @@ private:
     Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
-    explicit SDSSECQClient(int del_size);
+    explicit SDSSECQClient(int ins_size, int del_size);
     void update(OP op, const string& keyword, int ind);
     vector<int> search(int count, ...);
 };

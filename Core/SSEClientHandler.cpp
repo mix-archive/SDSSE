@@ -1,7 +1,11 @@
 #include "SSEClientHandler.h"
 
-SSEClientHandler::SSEClientHandler(int del_size) {
-    this->GGM_SIZE = get_BF_size(HASH_SIZE, del_size, GGM_FP);
+SSEClientHandler::SSEClientHandler(int ins_size, int del_size) {
+    if (del_size == 0) {
+        this->GGM_SIZE = get_BF_size(HASH_SIZE, ins_size, GGM_FP);
+    } else {
+        this->GGM_SIZE = get_BF_size(HASH_SIZE, del_size, GGM_FP);
+    }
     this->delete_bf = new BloomFilter<32, HASH_SIZE>(GGM_SIZE);
     // init the GGM Tree
     tree = new GGMTree(GGM_SIZE);

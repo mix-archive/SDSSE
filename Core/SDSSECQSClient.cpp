@@ -10,7 +10,7 @@ Zr SDSSECQSClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
 }
 
 
-SDSSECQSClient::SDSSECQSClient(int del_size) {
+SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size) {
     // generate or load pairing
     FILE *sysParamFile = fopen("pairing.param", "r");
     e = new Pairing(sysParamFile);
@@ -36,8 +36,8 @@ SDSSECQSClient::SDSSECQSClient(int del_size) {
     fclose(saved_g);
 
     // initialise SSE instance
-    TEDB = new SSEClientHandler(del_size);
-    XEDB = new SSEClientHandler(del_size);
+    TEDB = new SSEClientHandler(ins_size, del_size);
+    XEDB = new SSEClientHandler(ins_size, del_size);
 }
 
 void SDSSECQSClient::update(OP op, const string& keyword, int ind) {

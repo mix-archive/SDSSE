@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     int w2_size = atoi(argv[2]);
     int del_size = atoi(argv[3]);
 
-    SDSSECQSClient client(del_size);
+    SDSSECQSClient client(1, del_size);
 
     auto start = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
     for (int i = 0; i < w1_size; ++i) {
@@ -37,10 +37,10 @@ int main(int argc, char *argv[]) {
     start = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
     vector<int> single_results = client.search(1, "alice");
     end = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
-    cout << "Single Keyword Search Time: " << (end - start) / 1000 << " ms" << endl;
+    cout << "Single Keyword Search Time: " << (float)(end - start) / 1000 << " ms" << endl;
     start = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
     vector<int> conjunctive_results = client.search(2, "alice", "bob");
     end = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
-    cout << "Two-Keyword Conjunctive Search Time: " << (end - start) / 1000 << " ms" << endl;
+    cout << "Two-Keyword Conjunctive Search Time: " << (float)(end - start) / 1000 << " ms" << endl;
     return 0;
 }

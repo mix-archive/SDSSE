@@ -19,7 +19,7 @@ private:
 
     SSEServerHandler *server;
 public:
-    SSEClientHandler(int del_size);
+    SSEClientHandler(int ins_size, int del_size);
     ~SSEClientHandler();
     void update(OP op, const string& keyword, int ind, uint8_t* content, size_t content_len);
     vector<string> search(const string& keyword);

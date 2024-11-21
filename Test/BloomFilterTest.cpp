@@ -4,7 +4,7 @@
 
 
 int main() {
-    auto BF_size = get_BF_size(20, 3);
+    auto BF_size = get_BF_size(20, 3, 0.0000001);
 
     BloomFilter<1, 20> bf(BF_size);
 

@@ -1,7 +1,7 @@
 #include "Core/SSEClientHandler.h"
 
 int main() {
-    SSEClientHandler client;
+    SSEClientHandler client(200, 10);
 
 //    cout << duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() << endl;
     for (int i = 0; i < 200; ++i) {

@@ -1,0 +1,135 @@
+#!/bin/bash
+
+echo "Benchmark for SDSSE-CQ/SDSSE-CQ-S"
+
+echo -e "\nExperiment: SDSSE-CQ Search Time with Constant |w1| (without deletion)"
+
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQ 10 10 0
+
+echo -e "\nw1 = 10, w2 = 100"
+../build/SDSSECQ 10 100 0
+
+echo -e "\nw1 = 10, w2 = 1000"
+../build/SDSSECQ 10 1000 0
+
+echo -e "\nw1 = 10, w2 = 10000"
+../build/SDSSECQ 10 10000 0
+
+echo -e "\nw1 = 10, w2 = 100000"
+../build/SDSSECQ 10 100000 0
+
+echo -e "\nExperiment: SDSSE-CQ-S Search Time with Constant |w1| (without deletion)"
+
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQS 10 10 0
+
+echo -e "\nw1 = 10, w2 = 100"
+../build/SDSSECQS 10 100 0
+
+echo -e "\nw1 = 10, w2 = 1000"
+../build/SDSSECQS 10 1000 0
+
+echo -e "\nw1 = 10, w2 = 10000"
+../build/SDSSECQS 10 10000 0
+
+echo -e "\nw1 = 10, w2 = 100000"
+../build/SDSSECQS 10 100000 0
+
+echo -e "\nExperiment: SDSSE-CQ Search Time with Constant |w1| (with 10% deletion)"
+
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQ 10 10 1
+
+echo -e "\nw1 = 10, w2 = 100"
+../build/SDSSECQ 10 100 1
+
+echo -e "\nw1 = 10, w2 = 1000"
+../build/SDSSECQ 10 1000 1
+
+echo -e "\nw1 = 10, w2 = 10000"
+../build/SDSSECQ 10 10000 1
+
+echo -e "\nw1 = 10, w2 = 100000"
+../build/SDSSECQ 10 100000 1
+
+echo -e "\nExperiment: SDSSE-CQ-S Search Time with Constant |w1| (with 10% deletion)"
+
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQS 10 10 1
+
+echo -e "\nw1 = 10, w2 = 100"
+../build/SDSSECQS 10 100 1
+
+echo -e "\nw1 = 10, w2 = 1000"
+../build/SDSSECQS 10 1000 1
+
+echo -e "\nw1 = 10, w2 = 10000"
+../build/SDSSECQS 10 10000 1
+
+echo -e "\nw1 = 10, w2 = 100000"
+../build/SDSSECQS 10 100000 1
+
+echo -e "\nExperiment: SDSSE-CQ Search Time with Constant |w2| (without deletion)"
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQ 10 10 0
+
+echo -e "\nw1 = 100, w2 = 10"
+../build/SDSSECQ 100 10 0
+
+echo -e "\nw1 = 1000, w2 = 10"
+../build/SDSSECQ 1000 10 0
+
+echo -e "\nw1 = 10000, w2 = 10"
+../build/SDSSECQ 10000 10 0
+
+echo -e "\nw1 = 100000, w2 = 10"
+../build/SDSSECQ 100000 10 0
+
+echo -e "\nExperiment: SDSSE-CQ-S Search Time with Constant |w2| (without deletion)"
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQS 10 10 0
+
+echo -e "\nw1 = 100, w2 = 10"
+../build/SDSSECQS 100 10 0
+
+echo -e "\nw1 = 1000, w2 = 10"
+../build/SDSSECQS 1000 10 0
+
+echo -e "\nw1 = 10000, w2 = 10"
+../build/SDSSECQS 10000 10 0
+
+echo -e "\nw1 = 100000, w2 = 10"
+../build/SDSSECQS 100000 10 0
+
+echo -e "\nExperiment: SDSSE-CQ Search Time with Constant |w2| (with 10% deletion)"
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQ 10 10 1
+
+echo -e "\nw1 = 100, w2 = 10"
+../build/SDSSECQ 100 10 10
+
+echo -e "\nw1 = 1000, w2 = 10"
+../build/SDSSECQ 1000 10 100
+
+echo -e "\nw1 = 10000, w2 = 10"
+../build/SDSSECQ 10000 10 1000
+
+echo -e "\nw1 = 100000, w2 = 10"
+../build/SDSSECQ 100000 10 10000
+
+echo -e "\nExperiment: SDSSE-CQ-S Search Time with Constant |w2| (with 10% deletion)"
+echo -e "\nw1 = 10, w2 = 10"
+../build/SDSSECQS 10 10 1
+
+echo -e "\nw1 = 100, w2 = 10"
+../build/SDSSECQS 100 10 10
+
+echo -e "\nw1 = 1000, w2 = 10"
+../build/SDSSECQS 1000 10 100
+
+echo -e "\nw1 = 10000, w2 = 10"
+../build/SDSSECQS 10000 10 1000
+
+echo -e "\nw1 = 100000, w2 = 10"
+../build/SDSSECQS 100000 10 10000
