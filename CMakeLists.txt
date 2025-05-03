@@ -1,17 +1,33 @@
 cmake_minimum_required(VERSION 3.17)
+
+set(VCPKG_ROOT "${CMAKE_SOURCE_DIR}/extern/vcpkg")
+if (WIN32)
+    find_program(VCPKG_EXE "${VCPKG_ROOT}/vcpkg.exe")
+else()
+    find_program(VCPKG_EXE "${VCPKG_ROOT}/vcpkg")
+endif()
+set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE PATH "VCPKG toolchain file")
+
 project(SDSSE)
 
-set(CMAKE_CXX_STANDARD 14)
+find_package(OpenSSL REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
 
-FIND_PACKAGE(OpenSSL REQUIRED)
+find_path(PBC_INCLUDE_DIR pbc/pbc.h)
+include_directories(${PBC_INCLUDE_DIR})
+message(STATUS "PBC_INCLUDE_DIR: ${PBC_INCLUDE_DIR}")
+
+find_library(PBC_LIBRARY NAMES pbc HINTS ${CMAKE_PREFIX_PATH} PATH_SUFFIXES lib)
+message(STATUS "PBC_LIBRARY: ${PBC_LIBRARY}")
 
 # load header
-INCLUDE_DIRECTORIES(. BF BF/Hash GGM Util Util/PBC)
+include_directories(. BF BF/Hash GGM Util Util/PBC)
 
 # add link directory for pbc
-LINK_DIRECTORIES(Util/PBC)
+link_directories(Util/PBC)
 
-ADD_LIBRARY(PBC STATIC
+ADD_LIBRARY(PBCWrapper STATIC
         Util/PBC/G.cc
         Util/PBC/G1.cc
         Util/PBC/G2.cc
@@ -19,8 +35,7 @@ ADD_LIBRARY(PBC STATIC
         Util/PBC/Pairing.cc
         Util/PBC/PPPairing.cc
         Util/PBC/Zr.cc)
-
-TARGET_LINK_LIBRARIES(PBC -lgmp -lpbc)
+TARGET_LINK_LIBRARIES(PBCWrapper ${PBC_LIBRARY} PkgConfig::gmp)
 
 # set executable outputs
 ADD_EXECUTABLE(AESTest Test/AESTest.cpp Util/CommonUtil.c)
@@ -33,5 +48,5 @@ add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/
 TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SSETest OpenSSL::Crypto)
-TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBC)
-TARGET_LINK_LIBRARIES(SDSSECQS OpenSSL::Crypto PBC)
+TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBCWrapper)
+TARGET_LINK_LIBRARIES(SDSSECQS OpenSSL::Crypto PBCWrapper)

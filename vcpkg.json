@@ -1,0 +1,6 @@
+{
+  "dependencies": [
+    "pbc",
+    "openssl"
+  ]
+}
