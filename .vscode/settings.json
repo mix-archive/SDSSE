@@ -2,5 +2,6 @@
     "cmake.environment": {
         "CC": "clang",
         "CXX": "clang++",
-    }
+    },
+    "cmake.copyCompileCommands": "./compile_commands.json",
 }

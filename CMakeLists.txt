@@ -1,5 +1,22 @@
 cmake_minimum_required(VERSION 3.17)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Wshadow")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Wshadow")
+
+#if debug, add asan
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    message(STATUS "Debug build")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+endif()
+
+if (CMAKE_BUILD_TYPE MATCHES Release)
+    message(STATUS "Release build")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -march=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto -ffat-lto-objects -fuse-linker-plugin -Wl")
+endif()
+
 set(VCPKG_ROOT "${CMAKE_SOURCE_DIR}/extern/vcpkg")
 if (WIN32)
     find_program(VCPKG_EXE "${VCPKG_ROOT}/vcpkg.exe")
@@ -44,6 +61,7 @@ ADD_EXECUTABLE(GGMTest Test/GGMTest.cpp GGM/GGMTree.cpp Util/CommonUtil.c)
 ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c)
 add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
+
 # link
 TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)
