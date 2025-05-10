@@ -12,10 +12,7 @@ private:
   std::vector<bool> bits;
 
 public:
-  explicit BloomFilter(long num_of_bits) {
-    this->num_of_bits = num_of_bits;
-    bits.resize(num_of_bits, false);
-  }
+  explicit BloomFilter(long size) : num_of_bits(size), bits(size, false) {}
 
   void add_tag(uint8_t *key) {
     for (int i = 0; i < num_of_hashes; ++i) {

@@ -19,6 +19,7 @@ SSEClientHandler::SSEClientHandler(int ins_size, int del_size) {
 SSEClientHandler::~SSEClientHandler() {
   delete_bf->reset();
   delete server;
+  delete tree;
 }
 
 void SSEClientHandler::update(OP op, const string &keyword, int ind,

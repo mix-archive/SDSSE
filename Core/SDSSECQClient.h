@@ -32,6 +32,7 @@ public:
   explicit SDSSECQClient(int ins_size, int del_size);
   void update(OP op, const std::string &keyword, int ind);
   std::vector<int> search(int count, ...);
+  ~SDSSECQClient();
 };
 
 #endif // FBDSSE_SDSSECQCLIENT_H

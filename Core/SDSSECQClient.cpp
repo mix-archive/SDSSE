@@ -41,6 +41,14 @@ SDSSECQClient::SDSSECQClient(int ins_size, int del_size) {
   XEDB = new SSEClientHandler(ins_size, del_size);
 }
 
+SDSSECQClient::~SDSSECQClient() {
+  delete TEDB;
+  delete XEDB;
+  delete g;
+  delete gpp;
+  delete e;
+}
+
 void SDSSECQClient::update(OP op, const string &keyword, int ind) {
   // if w is never inserted, initialise the deletion map and counter map
   // MSK_T is used as the indicator here;
@@ -78,12 +86,11 @@ void SDSSECQClient::update(OP op, const string &keyword, int ind) {
       element_length_in_bytes(const_cast<element_s *>(y.getElement())));
   element_to_bytes(y_in_byte.data(), const_cast<element_s *>(y.getElement()));
   // 2. assign the array for the concatenation
-  vector<uint8_t> eyc(sizeof(encrypted_id) + sizeof(y_in_byte) + sizeof(int));
+  vector<uint8_t> eyc(sizeof(encrypted_id) + y_in_byte.size() + sizeof(int));
   // 3. copy into the array
   memcpy(eyc.data(), encrypted_id, sizeof(encrypted_id));
-  memcpy(eyc.data() + sizeof(encrypted_id), y_in_byte.data(),
-         sizeof(y_in_byte));
-  memcpy(eyc.data() + sizeof(encrypted_id) + sizeof(y_in_byte), &CT[keyword],
+  memcpy(eyc.data() + sizeof(encrypted_id), y_in_byte.data(), y_in_byte.size());
+  memcpy(eyc.data() + sizeof(encrypted_id) + y_in_byte.size(), &CT[keyword],
          sizeof(int));
   // upload to TEDB
   TEDB->update(op, keyword, ind, eyc.data(), eyc.size());
