@@ -3,6 +3,8 @@
 
 #include "Pairing.h"
 
+namespace PBC {
+
 using namespace std;
 
 class Zr {//Ring
@@ -110,5 +112,7 @@ private:
 
   void nullify();
 };
+
+} // namespace PBC
 
 #endif
