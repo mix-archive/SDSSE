@@ -20,9 +20,9 @@ SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size) {
     element_t old_g;
     element_init_GT(old_g, const_cast<pairing_s *>(e->getPairing()));
     element_set_str(old_g, s, 2);
-    uint8_t old_g_in_bytes[element_length_in_bytes(old_g)];
-    element_to_bytes(old_g_in_bytes, old_g);
-    g = new GT(*e, old_g_in_bytes, sizeof(old_g_in_bytes));
+    vector<uint8_t> old_g_in_bytes(element_length_in_bytes(old_g));
+    element_to_bytes(old_g_in_bytes.data(), old_g);
+    g = new GT(*e, old_g_in_bytes.data(), old_g_in_bytes.size());
     gpp = new GPP<GT>(*e, *g);
   } else {
     // a new group is required
@@ -62,38 +62,41 @@ void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
   // compute cross tags (xind=Fp(K_I, ind))
   Zr xind = Fp((uint8_t *)&ind, sizeof(int), K_I);
   // compute z=Fp(K_Z, w||c)
-  uint8_t Z_w[keyword.size() + sizeof(int)];
-  memcpy(Z_w, keyword.c_str(), keyword.size());
-  memcpy(Z_w + keyword.size(), &CT[keyword], sizeof(int));
-  Zr z = Fp(Z_w, sizeof(Z_w), K_Z);
+  vector<uint8_t> Z_w(keyword.size() + sizeof(int));
+  memcpy(Z_w.data(), keyword.c_str(), keyword.size());
+  memcpy(Z_w.data() + keyword.size(), &CT[keyword], sizeof(int));
+  Zr z = Fp(Z_w.data(), Z_w.size(), K_Z);
   // y = xind * z^-1
   Zr y = xind / z;
   // concatenate e, y and c
   // 1. convert element to byte array
-  uint8_t y_in_byte[element_length_in_bytes(
-      const_cast<element_s *>(y.getElement()))];
-  element_to_bytes(y_in_byte, const_cast<element_s *>(y.getElement()));
+  vector<uint8_t> y_in_byte(
+      element_length_in_bytes(const_cast<element_s *>(y.getElement())));
+  element_to_bytes(y_in_byte.data(), const_cast<element_s *>(y.getElement()));
   // 2. assign the array for the concatenation
-  uint8_t eyc[sizeof(encrypted_id) + sizeof(y_in_byte) + sizeof(int)];
+  vector<uint8_t> eyc(sizeof(encrypted_id) + sizeof(y_in_byte) + sizeof(int));
   // 3. copy into the array
-  memcpy(eyc, encrypted_id, sizeof(encrypted_id));
-  memcpy(eyc + sizeof(encrypted_id), y_in_byte, sizeof(y_in_byte));
-  memcpy(eyc + sizeof(encrypted_id) + sizeof(y_in_byte), &c, sizeof(int));
+  memcpy(eyc.data(), encrypted_id, sizeof(encrypted_id));
+  memcpy(eyc.data() + sizeof(encrypted_id), y_in_byte.data(),
+         sizeof(y_in_byte));
+  memcpy(eyc.data() + sizeof(encrypted_id) + sizeof(y_in_byte), &c,
+         sizeof(int));
   // upload to TEDB
-  TEDB->update(op, keyword, ind, eyc, sizeof(eyc));
+  TEDB->update(op, keyword, ind, eyc.data(), eyc.size());
 
   // generate xterm=g^(Fp(K_X, w)*xind)
   GT wxtag = (*gpp) ^ (Fp((uint8_t *)keyword.c_str(), keyword.size(), K_X) *
-                       xind / Fp((uint8_t *)Z_w, sizeof(Z_w), K_x));
-  uint8_t wxtag_in_byte[element_length_in_bytes(
-                            const_cast<element_s *>(wxtag.getElement())) +
-                        sizeof(int)];
-  element_to_bytes(wxtag_in_byte, const_cast<element_s *>(wxtag.getElement()));
-  memcpy(wxtag_in_byte + element_length_in_bytes(
-                             const_cast<element_s *>(wxtag.getElement())),
+                       xind / Fp((uint8_t *)Z_w.data(), Z_w.size(), K_x));
+  vector<uint8_t> wxtag_in_byte(
+      element_length_in_bytes(const_cast<element_s *>(wxtag.getElement())) +
+      sizeof(int));
+  element_to_bytes(wxtag_in_byte.data(),
+                   const_cast<element_s *>(wxtag.getElement()));
+  memcpy(wxtag_in_byte.data() + element_length_in_bytes(const_cast<element_s *>(
+                                    wxtag.getElement())),
          &c, sizeof(int));
   // upload to XEDB
-  XEDB->update(op, keyword, ind, wxtag_in_byte, sizeof(wxtag_in_byte));
+  XEDB->update(op, keyword, ind, wxtag_in_byte.data(), wxtag_in_byte.size());
 }
 
 vector<int> SDSSECQSClient::search(int count, ...) {
@@ -119,15 +122,15 @@ vector<int> SDSSECQSClient::search(int count, ...) {
     // compute wxtokens
     for (int i = 0; i <= CT[sterm]; i++) {
       // w_i=w||i
-      uint8_t w_i[sterm.size() + sizeof(int)];
+      vector<uint8_t> w_i(sterm.size() + sizeof(int));
       // reset the buffer
-      memset(w_i, 0, sterm.size() + sizeof(int));
-      memcpy(w_i, sterm.c_str(), sterm.size());
-      memcpy(w_i + sterm.size(), (uint8_t *)&i, sizeof(int));
+      memset(w_i.data(), 0, sterm.size() + sizeof(int));
+      memcpy(w_i.data(), sterm.c_str(), sterm.size());
+      memcpy(w_i.data() + sterm.size(), (uint8_t *)&i, sizeof(int));
       // compute the xtokens for this update
       vector<GT> token_i;
       // compute z=Fp(K_Z, w||i)
-      Zr z = Fp(w_i, sizeof(w_i), K_Z);
+      Zr z = Fp(w_i.data(), w_i.size(), K_Z);
       token_i.reserve(xterms.size());
       for (const string &xterm : xterms) {
         token_i.emplace_back(
@@ -145,12 +148,12 @@ vector<int> SDSSECQSClient::search(int count, ...) {
       vector<Zr> zx_i;
       for (int k = 0; k <= CT[xterm]; k++) {
         // w_j=w||j
-        uint8_t w_j[xterm.size() + sizeof(int)];
+        vector<uint8_t> w_j(xterm.size() + sizeof(int));
         // reset the buffer
-        memset(w_j, 0, xterm.size() + sizeof(int));
-        memcpy(w_j, xterm.c_str(), xterm.size());
-        memcpy(w_j + xterm.size(), (uint8_t *)&k, sizeof(int));
-        zx_i.emplace_back(Fp(w_j, sizeof(w_j), K_x) *
+        memset(w_j.data(), 0, xterm.size() + sizeof(int));
+        memcpy(w_j.data(), xterm.c_str(), xterm.size());
+        memcpy(w_j.data() + xterm.size(), (uint8_t *)&k, sizeof(int));
+        zx_i.emplace_back(Fp(w_j.data(), w_j.size(), K_x) *
                           Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z));
       }
       zxtoken_list.emplace_back(zx_i);

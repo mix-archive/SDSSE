@@ -24,16 +24,17 @@ SSEClientHandler::~SSEClientHandler() {
 void SSEClientHandler::update(OP op, const string &keyword, int ind,
                               uint8_t *content, size_t content_len) {
   // compute the tag
-  uint8_t pair[keyword.size() + sizeof(int)];
-  memcpy(pair, keyword.c_str(), keyword.size());
-  memcpy(pair + keyword.size(), (uint8_t *)&ind, sizeof(int));
+  vector<uint8_t> pair(keyword.size() + sizeof(int));
+  memcpy(pair.data(), keyword.c_str(), keyword.size());
+  memcpy(pair.data() + keyword.size(), (uint8_t *)&ind, sizeof(int));
   // generate the digest of tag
-  uint8_t tag[DIGEST_SIZE];
-  sha256_digest(pair, sizeof(pair), tag);
+  vector<uint8_t> tag(DIGEST_SIZE);
+  sha256_digest(pair.data(), pair.size(), tag.data());
   // process the operator
   if (op == INS) {
     // get all offsets in BF
-    vector<long> indexes = BloomFilter<32, HASH_SIZE>::get_index(tag, GGM_SIZE);
+    vector<long> indexes =
+        BloomFilter<32, HASH_SIZE>::get_index(tag.data(), GGM_SIZE);
     sort(indexes.begin(), indexes.end());
 
     // get SRE ciphertext list
@@ -44,13 +45,13 @@ void SSEClientHandler::update(OP op, const string &keyword, int ind,
       memcpy(derived_key, key, AES_BLOCK_SIZE);
       GGMTree::derive_key_from_tree(derived_key, index, tree->get_level(), 0);
       // use the key to encrypt the id
-      uint8_t encrypted_id[AES_BLOCK_SIZE + content_len];
-      memcpy(encrypted_id, iv, AES_BLOCK_SIZE);
-      aes_encrypt(content, content_len, derived_key, encrypted_id,
-                  encrypted_id + AES_BLOCK_SIZE);
+      vector<uint8_t> encrypted_id(AES_BLOCK_SIZE + content_len);
+      memcpy(encrypted_id.data(), iv, AES_BLOCK_SIZE);
+      aes_encrypt(content, content_len, derived_key, encrypted_id.data(),
+                  encrypted_id.data() + AES_BLOCK_SIZE);
       // save the encrypted id in the list
-      ciphertext_list.emplace_back((char *)encrypted_id,
-                                   AES_BLOCK_SIZE + content_len);
+      ciphertext_list.emplace_back((char *)encrypted_id.data(),
+                                   encrypted_id.size());
     }
 
     // token
@@ -63,13 +64,13 @@ void SSEClientHandler::update(OP op, const string &keyword, int ind,
     hmac_digest((uint8_t *)&counter, sizeof(int), token, DIGEST_SIZE, label);
     C[keyword]++;
     // convert tag/label to string
-    string tag_str((char *)tag, DIGEST_SIZE);
+    string tag_str((char *)tag.data(), DIGEST_SIZE);
     string label_str((char *)label, DIGEST_SIZE);
     // save the list on the server
     server->add_entries(label_str, tag_str, ciphertext_list);
   } else {
     // insert the tag into BF
-    delete_bf->add_tag(tag);
+    delete_bf->add_tag(tag.data());
   }
 }
 
