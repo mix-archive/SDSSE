@@ -1,4 +1,5 @@
 #include "SDSSECQSClient.h"
+#include <pbc/pbc.h>
 
 using PBC::Zr, PBC::GT, PBC::GPP, PBC::Pairing;
 using std::vector, std::string;
@@ -10,9 +11,26 @@ Zr SDSSECQSClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
   return Zr(*e, (void *)PRF, DIGEST_SIZE);
 }
 
-SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size) {
-  // generate or load pairing
+SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size, bool init_remote) {
+  // generate or load pairing parameters. If pairing.param does not exist,
+  // generate default Type A parameters (rbits=160, qbits=512).
   FILE *sysParamFile = fopen("pairing.param", "r");
+  if (!sysParamFile) {
+    // Create new param file
+    FILE *paramOut = fopen("pairing.param", "w");
+    if (!paramOut) {
+      fprintf(stderr, "[SDSSECQSClient] Cannot create pairing.param file.\n");
+      throw std::runtime_error("failed to create pairing.param");
+    }
+    // Use libpbc to generate Type A parameters. 160-bit r, 512-bit q.
+    pbc_param_t p;
+    pbc_param_init_a_gen(p, 160, 512);
+    pbc_param_out_str(paramOut, p);
+    pbc_param_clear(p);
+    fclose(paramOut);
+    // reopen for reading
+    sysParamFile = fopen("pairing.param", "r");
+  }
   e = new Pairing(sysParamFile);
   fclose(sysParamFile);
   // try to load the saved group
@@ -36,8 +54,10 @@ SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size) {
   fclose(saved_g);
 
   // initialise SSE instance
-  TEDB = new SSEClientHandler(ins_size, del_size, "tedb");
-  XEDB = new SSEClientHandler(ins_size, del_size, "xedb");
+  TEDB = new SSEClientHandler(ins_size, del_size, "tedb", "127.0.0.1", 5000,
+                              init_remote);
+  XEDB = new SSEClientHandler(ins_size, del_size, "xedb", "127.0.0.1", 5000,
+                              init_remote);
 }
 
 void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
@@ -220,4 +240,12 @@ vector<int> SDSSECQSClient::search(int count, ...) {
     res.push_back(ind);
   }
   return res;
+}
+
+SDSSECQSClient::~SDSSECQSClient() {
+  delete TEDB;  // Ensures pending insertions are flushed to server
+  delete XEDB;
+  delete g;
+  delete gpp;
+  delete e;
 }

@@ -1,5 +1,6 @@
 #include "SDSSECQClient.h"
 #include "Pairing.h"
+#include <pbc/pbc.h>
 
 using PBC::Zr, PBC::GT, PBC::GPP, PBC::Pairing;
 using std::vector, std::string;
@@ -12,8 +13,22 @@ Zr SDSSECQClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
 }
 
 SDSSECQClient::SDSSECQClient(int ins_size, int del_size) {
-  // generate or load pairing
+  // generate or load pairing parameters. If pairing.param does not exist,
+  // generate default Type A parameters (rbits=160, qbits=512).
   FILE *sysParamFile = fopen("pairing.param", "r");
+  if (!sysParamFile) {
+    FILE *paramOut = fopen("pairing.param", "w");
+    if (!paramOut) {
+      fprintf(stderr, "[SDSSECQClient] Cannot create pairing.param file.\n");
+      throw std::runtime_error("failed to create pairing.param");
+    }
+    pbc_param_t p;
+    pbc_param_init_a_gen(p, 160, 512);
+    pbc_param_out_str(paramOut, p);
+    pbc_param_clear(p);
+    fclose(paramOut);
+    sysParamFile = fopen("pairing.param", "r");
+  }
   e = new Pairing(sysParamFile);
   fclose(sysParamFile);
   // try to load the saved group

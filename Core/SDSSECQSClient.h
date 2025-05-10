@@ -35,9 +35,22 @@ private:
   PBC::Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
-  explicit SDSSECQSClient(int ins_size, int del_size);
+  explicit SDSSECQSClient(int ins_size, int del_size, bool init_remote = true);
   void update(OP op, const std::string &keyword, int ind);
   std::vector<int> search(int count, ...);
+  ~SDSSECQSClient();
+
+  // Load keyword counter map (CT) from external source, replacing existing
+  // entries. Each value should be (number_of_insertions_for_keyword - 1).
+  void load_CT(const std::unordered_map<std::string, int> &ct_map) {
+    CT = ct_map;
+  }
+
+  // Force flush pending insertions to server.
+  void flush() {
+    TEDB->flush();
+    XEDB->flush();
+  }
 };
 
 #endif // FBDSSE_SDSSECQCLIENT_H

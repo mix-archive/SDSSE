@@ -5,12 +5,14 @@
 
 using std::string, std::vector, std::set_difference, std::inserter;
 
-SSEClientHandler::SSEClientHandler(int ins_size, int del_size)
-    : SSEClientHandler(ins_size, del_size, "default") {}
+SSEClientHandler::SSEClientHandler(int ins_size, int del_size, bool init_remote)
+    : SSEClientHandler(ins_size, del_size, "default", "127.0.0.1", 5000,
+                       init_remote) {}
 
 SSEClientHandler::SSEClientHandler(int ins_size, int del_size,
                                    const std::string &db_id,
-                                   const std::string &host, uint16_t port) {
+                                   const std::string &host, uint16_t port,
+                                   bool init_remote) {
   if (del_size == 0) {
     this->GGM_SIZE = get_BF_size(HASH_SIZE, ins_size, GGM_FP);
   } else {
@@ -22,8 +24,12 @@ SSEClientHandler::SSEClientHandler(int ins_size, int del_size,
 
   // initialize remote server client SDK
   server = new SSEServerClient(host, port, db_id);
-  // ensure server-side handler is ready with correct GGM configuration
-  server->init_handler(GGM_SIZE);
+  // Initialise remote handler only when explicitly requested. This prevents
+  // accidental clearing of an existing remote database when connecting from
+  // multiple processes.
+  if (init_remote) {
+    server->init_handler(GGM_SIZE);
+  }
 }
 
 SSEClientHandler::~SSEClientHandler() {
