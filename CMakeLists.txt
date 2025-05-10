@@ -71,6 +71,7 @@ ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServer
 add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 ADD_EXECUTABLE(SSEServerStandalone Server/SSEServerStandalone.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c)
+add_executable(SDSSECQSCLI SDSSECQSCLI.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 
 # link
 TARGET_LINK_LIBRARIES(SM4Test OpenSSL::Crypto)
@@ -79,3 +80,4 @@ TARGET_LINK_LIBRARIES(SSETest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBCWrapper msgpack-cxx)
 TARGET_LINK_LIBRARIES(SDSSECQS OpenSSL::Crypto PBCWrapper msgpack-cxx)
 TARGET_LINK_LIBRARIES(SSEServerStandalone OpenSSL::Crypto msgpack-cxx pthread tbb)
+TARGET_LINK_LIBRARIES(SDSSECQSCLI OpenSSL::Crypto PBCWrapper msgpack-cxx)
