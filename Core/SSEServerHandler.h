@@ -1,39 +1,28 @@
 #ifndef AURA_SSESERVERHANDLER_H
 #define AURA_SSESERVERHANDLER_H
 
-#include <algorithm>
-#include <chrono>
+#include "GGMNode.h"
 #include <cstdint>
-#include <cstring>
-#include <iostream>
 #include <string>
-#include <vector>
 #include <unordered_map>
-#include <utility>
-
-#include "BloomFilter.h"
-extern "C" {
-#include "CommonUtil.h"
-}
-#include "GGMTree.h"
-
-using namespace chrono;
-using namespace std;
+#include <vector>
 
 class SSEServerHandler {
 private:
-    unordered_map<string, string> tags;
-    unordered_map<string, vector<string>> dict;
-    unordered_map<long, uint8_t*> keys;
-    unordered_map<long, long> root_key_map;
-    int GGM_SIZE;
+  std::unordered_map<std::string, std::string> tags;
+  std::unordered_map<std::string, std::vector<std::string>> dict;
+  std::unordered_map<long, uint8_t *> keys;
+  std::unordered_map<long, long> root_key_map;
+  int GGM_SIZE;
 
-    void compute_leaf_key_maps(const vector<GGMNode>& node_list, int level);
+  void compute_leaf_key_maps(const std::vector<GGMNode> &node_list, int level);
+
 public:
-    explicit SSEServerHandler(int GGM_SIZE);
-    void add_entries(const string& label, const string& tag, vector<string> ciphertext_list);
-    vector<string> search(uint8_t *token, const vector<GGMNode>& node_list, int level);
+  explicit SSEServerHandler(int GGM_SIZE);
+  void add_entries(const std::string &label, const std::string &tag,
+                   std::vector<std::string> ciphertext_list);
+  std::vector<std::string>
+  search(uint8_t *token, const std::vector<GGMNode> &node_list, int level);
 };
 
-
-#endif //AURA_SSESERVERHANDLER_H
+#endif // AURA_SSESERVERHANDLER_H

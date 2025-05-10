@@ -1,26 +1,20 @@
 #ifndef AURA_BLOOMFILTER_H
 #define AURA_BLOOMFILTER_H
 
-#include <bitset>
-#include <cmath>
-#include <vector>
-
 #include "Hash/SpookyV2.h"
-
-using namespace std;
+#include <vector>
 
 int get_BF_size(int hashes, int items, float fp);
 
 template <int key_len, int num_of_hashes> class BloomFilter {
 private:
   long num_of_bits{};
-  vector<bool> bits;
+  std::vector<bool> bits;
 
 public:
   explicit BloomFilter(long num_of_bits) {
     this->num_of_bits = num_of_bits;
-    bits.reserve(num_of_bits);
-    bits.assign(num_of_bits, false);
+    bits.resize(num_of_bits, false);
   }
 
   void add_tag(uint8_t *key) {
@@ -41,8 +35,8 @@ public:
 
   void reset() { bits.clear(); }
 
-  vector<long> static get_index(uint8_t *key, int num_of_bits) {
-    vector<long> indexes;
+  std::vector<long> static get_index(uint8_t *key, int num_of_bits) {
+    std::vector<long> indexes;
     for (int i = 0; i < num_of_hashes; ++i) {
       long index = SpookyHash::Hash64(key, key_len, i) % num_of_bits;
       indexes.emplace_back(index);
@@ -50,8 +44,8 @@ public:
     return indexes;
   }
 
-  vector<long> search(bool value = true) {
-    vector<long> indexes;
+  std::vector<long> search(bool value = true) {
+    std::vector<long> indexes;
     for (int i = 0; i < num_of_bits; ++i) {
       if (bits[i] == value) {
         indexes.emplace_back(i);
