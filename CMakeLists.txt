@@ -10,8 +10,8 @@ endif()
 #if debug, add asan
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     message(STATUS "Debug build")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fsanitize=address")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fsanitize=address,undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address,undefined")
 endif()
 
 if (CMAKE_BUILD_TYPE MATCHES Release)
@@ -59,7 +59,7 @@ ADD_LIBRARY(PBCWrapper STATIC
 TARGET_LINK_LIBRARIES(PBCWrapper ${PBC_LIBRARY} PkgConfig::gmp)
 
 # set executable outputs
-ADD_EXECUTABLE(AESTest Test/AESTest.cpp Util/CommonUtil.c)
+ADD_EXECUTABLE(SM4Test Test/SM4Test.cpp Util/CommonUtil.c)
 ADD_EXECUTABLE(BloomFilterTest Test/BloomFilterTest.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp)
 ADD_EXECUTABLE(GGMTest Test/GGMTest.cpp GGM/GGMTree.cpp Util/CommonUtil.c)
 ADD_EXECUTABLE(SSETest Test/SSETest.cpp Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c)
@@ -67,7 +67,7 @@ add_executable(SDSSECQ SDSSECQ.cpp Core/SDSSECQClient.cpp GGM/GGMTree.cpp BF/Has
 add_executable(SDSSECQS SDSSECQS.cpp Core/SDSSECQSClient.cpp GGM/GGMTree.cpp BF/Hash/SpookyV2.cpp BF/BloomFilter.cpp Util/CommonUtil.c  Core/SSEClientHandler.cpp Core/SSEServerHandler.cpp)
 
 # link
-TARGET_LINK_LIBRARIES(AESTest OpenSSL::Crypto)
+TARGET_LINK_LIBRARIES(SM4Test OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SSETest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBCWrapper)

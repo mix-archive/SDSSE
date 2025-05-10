@@ -9,16 +9,16 @@ GGMTree::GGMTree(long num_node) { this->level = ceil(log2(num_node)); }
 
 void GGMTree::derive_key_from_tree(uint8_t *current_key, long offset,
                                    int start_level, int target_level) {
-  uint8_t next_key[AES_BLOCK_SIZE];
+  uint8_t next_key[SM4_BLOCK_SIZE];
   // does not need to derive
   if (start_level == target_level)
     return;
   // derive tag
   for (int k = start_level; k > target_level; --k) {
     int k_bit = (offset & (1 << (k - 1))) >> (k - 1);
-    key_derivation((uint8_t *)&k_bit, sizeof(int), current_key, AES_BLOCK_SIZE,
+    key_derivation((uint8_t *)&k_bit, sizeof(int), current_key, SM4_BLOCK_SIZE,
                    next_key);
-    memcpy(current_key, next_key, AES_BLOCK_SIZE);
+    memcpy(current_key, next_key, SM4_BLOCK_SIZE);
   }
 }
 

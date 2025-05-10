@@ -46,23 +46,23 @@ vector<string> SSEServerHandler::search(uint8_t *token,
     vector<string> ciphertext_list = dict[label_str];
     for (size_t i = 0; i < min(search_pos.size(), ciphertext_list.size());
          ++i) {
-      vector<uint8_t> res(ciphertext_list[i].size() - AES_BLOCK_SIZE);
+      vector<uint8_t> res(ciphertext_list[i].size() - SM4_BLOCK_SIZE);
       if (root_key_map.find(search_pos[i]) == root_key_map.end())
         break;
       // derive key for the search position
-      uint8_t derive_key[AES_BLOCK_SIZE];
+      uint8_t derive_key[SM4_BLOCK_SIZE];
       std::memcpy(derive_key, node_list[root_key_map[search_pos[i]]].key,
-                  AES_BLOCK_SIZE);
+                  SM4_BLOCK_SIZE);
       GGMTree::derive_key_from_tree(
           derive_key, search_pos[i],
           level - node_list[root_key_map[search_pos[i]]].level, 0);
       int size =
-          aes_decrypt((uint8_t *)(ciphertext_list[i].c_str() + AES_BLOCK_SIZE),
-                      ciphertext_list[i].size() - AES_BLOCK_SIZE, derive_key,
+          sm4_decrypt((uint8_t *)(ciphertext_list[i].c_str() + SM4_BLOCK_SIZE),
+                      ciphertext_list[i].size() - SM4_BLOCK_SIZE, derive_key,
                       (uint8_t *)ciphertext_list[i].c_str(), res.data());
       if (size > 0) {
         res_list.emplace_back(reinterpret_cast<const char *>(res.data()),
-                              ciphertext_list[i].size() - AES_BLOCK_SIZE);
+                              ciphertext_list[i].size() - SM4_BLOCK_SIZE);
       }
       break;
     }

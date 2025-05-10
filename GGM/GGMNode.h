@@ -11,7 +11,7 @@ class GGMNode {
 public:
   long index;
   int level;
-  uint8_t key[AES_BLOCK_SIZE]{};
+  uint8_t key[SM4_BLOCK_SIZE]{};
 
   GGMNode(long index, int level) {
     this->index = index;
@@ -21,7 +21,7 @@ public:
   GGMNode(long index, int level, uint8_t *key) {
     this->index = index;
     this->level = level;
-    std::memcpy(this->key, key, AES_BLOCK_SIZE);
+    std::memcpy(this->key, key, SM4_BLOCK_SIZE);
   }
 };
 

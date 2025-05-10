@@ -5,7 +5,7 @@ using std::vector, std::string;
 
 Zr SDSSECQSClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
   uint8_t PRF[DIGEST_SIZE];
-  hmac_digest(input, input_size, key, AES_BLOCK_SIZE, PRF);
+  hmac_digest(input, input_size, key, SM4_BLOCK_SIZE, PRF);
 
   return Zr(*e, (void *)PRF, DIGEST_SIZE);
 }
@@ -54,14 +54,14 @@ void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
   // generate the key for w
   uint8_t K_w[DIGEST_SIZE];
   hmac_digest((unsigned char *)keyword.c_str(), keyword.size(), K,
-              AES_BLOCK_SIZE, K_w);
+              SM4_BLOCK_SIZE, K_w);
 
   // compute TSet values
   // encrypt the id
-  uint8_t encrypted_id[AES_BLOCK_SIZE + sizeof(int)];
-  memcpy(encrypted_id, iv, AES_BLOCK_SIZE);
-  aes_encrypt((uint8_t *)&ind, sizeof(int), K_w, encrypted_id,
-              encrypted_id + AES_BLOCK_SIZE);
+  uint8_t encrypted_id[SM4_BLOCK_SIZE + sizeof(int)];
+  memcpy(encrypted_id, iv, SM4_BLOCK_SIZE);
+  sm4_encrypt((uint8_t *)&ind, sizeof(int), K_w, encrypted_id,
+              encrypted_id + SM4_BLOCK_SIZE);
   // compute cross tags (xind=Fp(K_I, ind))
   Zr xind = Fp((uint8_t *)&ind, sizeof(int), K_I);
   // compute z=Fp(K_Z, w||c)
@@ -192,9 +192,9 @@ vector<int> SDSSECQSClient::search(int count, ...) {
   vector<uint8 *> encrypted_res_list;
   for (const string &t_tuple : Res_T) {
     auto flag = true;
-    Zr y = Zr(*e, t_tuple.c_str() + AES_BLOCK_SIZE + sizeof(int), 20);
+    Zr y = Zr(*e, t_tuple.c_str() + SM4_BLOCK_SIZE + sizeof(int), 20);
     for (int j = 1; j < count; j++) {
-      GT tag = wxtoken_list[*(int *)(t_tuple.c_str() + AES_BLOCK_SIZE +
+      GT tag = wxtoken_list[*(int *)(t_tuple.c_str() + SM4_BLOCK_SIZE +
                                      sizeof(int) + 20)][j - 1] ^
                y;
       if (!Res_WX.might_contain((uint8_t *)tag.toString().c_str())) {
@@ -211,11 +211,11 @@ vector<int> SDSSECQSClient::search(int count, ...) {
   // decrypt e locally
   // generate the key for sterm
   uint8_t K_w[DIGEST_SIZE];
-  hmac_digest((unsigned char *)sterm.c_str(), sterm.size(), K, AES_BLOCK_SIZE,
+  hmac_digest((unsigned char *)sterm.c_str(), sterm.size(), K, SM4_BLOCK_SIZE,
               K_w);
   for (auto encrypted_res : encrypted_res_list) {
     int ind;
-    aes_decrypt(encrypted_res + AES_BLOCK_SIZE, sizeof(int), K_w, encrypted_res,
+    sm4_decrypt(encrypted_res + SM4_BLOCK_SIZE, sizeof(int), K_w, encrypted_res,
                 (uint8_t *)&ind);
     res.push_back(ind);
   }

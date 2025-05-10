@@ -30,7 +30,7 @@ void SSEClientHandler::update(OP op, const string &keyword, int ind,
   memcpy(pair.data() + keyword.size(), (uint8_t *)&ind, sizeof(int));
   // generate the digest of tag
   vector<uint8_t> tag(DIGEST_SIZE);
-  sha256_digest(pair.data(), pair.size(), tag.data());
+  sm3_digest(pair.data(), pair.size(), tag.data());
   // process the operator
   if (op == INS) {
     // get all offsets in BF
@@ -42,14 +42,14 @@ void SSEClientHandler::update(OP op, const string &keyword, int ind,
     vector<string> ciphertext_list;
     for (long index : indexes) {
       // derive a key from the offset
-      uint8_t derived_key[AES_BLOCK_SIZE];
-      memcpy(derived_key, key, AES_BLOCK_SIZE);
+      uint8_t derived_key[SM4_BLOCK_SIZE];
+      memcpy(derived_key, key, SM4_BLOCK_SIZE);
       GGMTree::derive_key_from_tree(derived_key, index, tree->get_level(), 0);
       // use the key to encrypt the id
-      vector<uint8_t> encrypted_id(AES_BLOCK_SIZE + content_len);
-      memcpy(encrypted_id.data(), iv, AES_BLOCK_SIZE);
-      aes_encrypt(content, content_len, derived_key, encrypted_id.data(),
-                  encrypted_id.data() + AES_BLOCK_SIZE);
+      vector<uint8_t> encrypted_id(SM4_BLOCK_SIZE + content_len);
+      memcpy(encrypted_id.data(), iv, SM4_BLOCK_SIZE);
+      sm4_encrypt(content, content_len, derived_key, encrypted_id.data(),
+                  encrypted_id.data() + SM4_BLOCK_SIZE);
       // save the encrypted id in the list
       ciphertext_list.emplace_back((char *)encrypted_id.data(),
                                    encrypted_id.size());
@@ -57,7 +57,7 @@ void SSEClientHandler::update(OP op, const string &keyword, int ind,
 
     // token
     uint8_t token[DIGEST_SIZE];
-    hmac_digest((uint8_t *)keyword.c_str(), keyword.size(), key, AES_BLOCK_SIZE,
+    hmac_digest((uint8_t *)keyword.c_str(), keyword.size(), key, SM4_BLOCK_SIZE,
                 token);
     // label
     int counter = C[keyword];
@@ -81,7 +81,7 @@ vector<string> SSEClientHandler::search(const string &keyword) {
   //    duration_cast<microseconds>(system_clock::now().time_since_epoch()).count()
   //    << endl;
   uint8_t token[DIGEST_SIZE];
-  hmac_digest((uint8_t *)keyword.c_str(), keyword.size(), key, AES_BLOCK_SIZE,
+  hmac_digest((uint8_t *)keyword.c_str(), keyword.size(), key, SM4_BLOCK_SIZE,
               token);
   // search all deleted positions
   vector<long> bf_pos;
@@ -102,7 +102,7 @@ vector<string> SSEClientHandler::search(const string &keyword) {
   vector<GGMNode> remain_node = tree->min_coverage(node_list);
   // compute the key set and send to the server
   for (auto &i : remain_node) {
-    memcpy(i.key, key, AES_BLOCK_SIZE);
+    memcpy(i.key, key, SM4_BLOCK_SIZE);
     GGMTree::derive_key_from_tree(i.key, i.index, i.level, 0);
   }
   // give all results to the server for search
