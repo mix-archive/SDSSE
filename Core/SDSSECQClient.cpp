@@ -37,8 +37,8 @@ SDSSECQClient::SDSSECQClient(int ins_size, int del_size) {
   fclose(saved_g);
 
   // initialise SSE instance
-  TEDB = new SSEClientHandler(ins_size, del_size);
-  XEDB = new SSEClientHandler(ins_size, del_size);
+  TEDB = new SSEClientHandler(ins_size, del_size, "tedb");
+  XEDB = new SSEClientHandler(ins_size, del_size, "xedb");
 }
 
 SDSSECQClient::~SDSSECQClient() {

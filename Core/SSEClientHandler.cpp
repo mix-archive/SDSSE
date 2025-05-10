@@ -1,9 +1,16 @@
 #include "SSEClientHandler.h"
 #include <algorithm>
+#include <cstring>
+#include <iterator>
 
 using std::string, std::vector, std::set_difference, std::inserter;
 
-SSEClientHandler::SSEClientHandler(int ins_size, int del_size) {
+SSEClientHandler::SSEClientHandler(int ins_size, int del_size)
+    : SSEClientHandler(ins_size, del_size, "default") {}
+
+SSEClientHandler::SSEClientHandler(int ins_size, int del_size,
+                                   const std::string &db_id,
+                                   const std::string &host, uint16_t port) {
   if (del_size == 0) {
     this->GGM_SIZE = get_BF_size(HASH_SIZE, ins_size, GGM_FP);
   } else {
@@ -13,10 +20,14 @@ SSEClientHandler::SSEClientHandler(int ins_size, int del_size) {
   // init the GGM Tree
   tree = new GGMTree(GGM_SIZE);
 
-  server = new SSEServerHandler(GGM_SIZE);
+  // initialize remote server client SDK
+  server = new SSEServerClient(host, port, db_id);
+  // ensure server-side handler is ready with correct GGM configuration
+  server->init_handler(GGM_SIZE);
 }
 
 SSEClientHandler::~SSEClientHandler() {
+  flush_batch();
   delete_bf->reset();
   delete server;
   delete tree;
@@ -67,15 +78,22 @@ void SSEClientHandler::update(OP op, const string &keyword, int ind,
     // convert tag/label to string
     string tag_str((char *)tag.data(), DIGEST_SIZE);
     string label_str((char *)label, DIGEST_SIZE);
-    // save the list on the server
-    server->add_entries(label_str, tag_str, ciphertext_list);
+    // enqueue entry for batch upload
+    pending_entries.emplace_back(label_str, tag_str, ciphertext_list);
+    if (pending_entries.size() >= BATCH_SIZE) {
+      flush_batch();
+    }
   } else {
+    // Ensure all pending insertions are committed before deletions
+    flush_batch();
     // insert the tag into BF
     delete_bf->add_tag(tag.data());
   }
 }
 
 vector<string> SSEClientHandler::search(const string &keyword) {
+  // Commit any pending entries before searching
+  flush_batch();
   // token
   //    cout <<
   //    duration_cast<microseconds>(system_clock::now().time_since_epoch()).count()
@@ -109,9 +127,20 @@ vector<string> SSEClientHandler::search(const string &keyword) {
   //    cout <<
   //    duration_cast<microseconds>(system_clock::now().time_since_epoch()).count()
   //    << endl;
-  vector<string> res = server->search(token, remain_node, tree->get_level());
+  std::string token_str(reinterpret_cast<char *>(token), DIGEST_SIZE);
+  vector<string> res;
+  if (!server->search(token_str, remain_node, tree->get_level(), res)) {
+    return {};
+  }
   //    cout <<
   //    duration_cast<microseconds>(system_clock::now().time_since_epoch()).count()
   //    << endl;
   return res;
+}
+
+void SSEClientHandler::flush_batch() {
+  if (pending_entries.empty())
+    return;
+  server->add_entries_batch(pending_entries);
+  pending_entries.clear();
 }

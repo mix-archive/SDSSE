@@ -9,7 +9,7 @@ using namespace std;
 
 class PBCException : public runtime_error {
 public:
-  PBCException(string str = NULL) : runtime_error("PBC Exception: " + str) {}
+  PBCException(const string &str = "") : runtime_error("PBC Exception: " + str) {}
 };
 
 class UndefinedPairingException : public PBCException {
