@@ -1,4 +1,8 @@
 #include "SDSSECQClient.h"
+#include "Pairing.h"
+
+using PBC::Zr, PBC::GT, PBC::GPP, PBC::Pairing;
+using std::vector, std::string;
 
 Zr SDSSECQClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
   uint8_t PRF[DIGEST_SIZE];
@@ -70,8 +74,8 @@ void SDSSECQClient::update(OP op, const string &keyword, int ind) {
   Zr y = xind / z;
   // concatenate e, y and c
   // 1. convert element to byte array
-  vector<uint8_t> y_in_byte(element_length_in_bytes(
-      const_cast<element_s *>(y.getElement())));
+  vector<uint8_t> y_in_byte(
+      element_length_in_bytes(const_cast<element_s *>(y.getElement())));
   element_to_bytes(y_in_byte.data(), const_cast<element_s *>(y.getElement()));
   // 2. assign the array for the concatenation
   vector<uint8_t> eyc(sizeof(encrypted_id) + sizeof(y_in_byte) + sizeof(int));

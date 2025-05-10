@@ -21,23 +21,23 @@ private:
   uint8_t *iv = (unsigned char *)"9876543210123456";
 
   // pairing and GT element
-  Pairing *e;
-  GT *g;
-  GPP<GT> *gpp;
+  PBC::Pairing *e;
+  PBC::GT *g;
+  PBC::GPP<PBC::GT> *gpp;
 
   // SSE Instance
   SSEClientHandler *TEDB;
   SSEClientHandler *XEDB;
 
   // state map
-  unordered_map<string, int> CT;
+  std::unordered_map<std::string, int> CT;
 
-  Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
+  PBC::Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
   explicit SDSSECQSClient(int ins_size, int del_size);
-  void update(OP op, const string &keyword, int ind);
-  vector<int> search(int count, ...);
+  void update(OP op, const std::string &keyword, int ind);
+  std::vector<int> search(int count, ...);
 };
 
 #endif // FBDSSE_SDSSECQCLIENT_H

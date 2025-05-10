@@ -1,5 +1,8 @@
 #include "SDSSECQSClient.h"
 
+using PBC::Zr, PBC::GT, PBC::GPP, PBC::Pairing;
+using std::vector, std::string;
+
 Zr SDSSECQSClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
   uint8_t PRF[DIGEST_SIZE];
   hmac_digest(input, input_size, key, AES_BLOCK_SIZE, PRF);
