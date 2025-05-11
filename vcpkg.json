@@ -1,10 +1,13 @@
 {
   "dependencies": [
-    "openssl",
-    "pbc",
     {
       "name": "msgpack",
-      "features": ["boost"]
-    }
+      "features": [
+        "boost"
+      ]
+    },
+    "openssl",
+    "pbc",
+    "args"
   ]
 }

@@ -1,5 +1,5 @@
-// SDSSECQSCLI.cpp
 #include "Core/SDSSECQSClient.h"
+#include <args.hxx>
 #include <cstddef>
 #include <format>
 #include <fstream>
@@ -9,22 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::string;
-using std::vector;
-
-static void print_usage(const char *prog_name) {
-  cout << "Usage:" << endl;
-  cout << "  " << prog_name << " index  <file>" << endl;
-  cout << "  " << prog_name << " delete <file> <id>" << endl;
-  cout << "  " << prog_name << " search <file> <keyword1> [keyword2 ...]"
-       << endl;
-}
-
 static inline std::vector<std::pair<unsigned int, std::vector<std::string>>>
-parse_file(const string &filename) {
+parse_file(const std::string &filename) {
   std::ifstream fin(filename);
   if (!fin.is_open()) {
     throw std::runtime_error("Cannot open file: " + filename);
@@ -37,7 +23,8 @@ parse_file(const string &filename) {
     std::stringstream ss(line);
     unsigned int id;
     if (!(ss >> id)) {
-      cerr << std::format("Invalid line (missing id): {}", line) << endl;
+      std::cerr << std::format("Invalid line (missing id): {}", line)
+                << std::endl;
       continue;
     }
     std::vector<std::string> keywords;
@@ -50,7 +37,7 @@ parse_file(const string &filename) {
   return data;
 }
 
-static void index_file(const string &filename) {
+static void index_file(const std::string &filename) {
   auto data = parse_file(filename);
   SDSSECQSClient client(static_cast<int>(data.size()),
                         static_cast<int>(data.size()), true);
@@ -73,7 +60,7 @@ static void index_file(const string &filename) {
   client.flush();
 }
 
-static void delete_id(const string &filename, unsigned int target_id) {
+static void delete_id(const std::string &filename, unsigned int target_id) {
   auto data = parse_file(filename);
   SDSSECQSClient client(static_cast<int>(data.size()),
                         static_cast<int>(data.size()), false);
@@ -83,8 +70,8 @@ static void delete_id(const string &filename, unsigned int target_id) {
         return pair.first == target_id;
       });
   if (it == data.end()) {
-    cout << std::format("No entry with id {} found in file.", target_id)
-         << endl;
+    std::cout << std::format("No entry with id {} found in file.", target_id)
+              << std::endl;
     return;
   }
   const auto &[id, keywords] = *it;
@@ -93,15 +80,15 @@ static void delete_id(const string &filename, unsigned int target_id) {
   }
   // flush deletions
   client.flush();
-  cout << std::format("Deletion done for id {}, {} keywords affected",
-                      target_id, keywords.size())
-       << endl;
+  std::cout << std::format("Deletion done for id {}, {} keywords affected",
+                           target_id, keywords.size())
+            << std::endl;
 }
 
-static void search_keywords(const string &filename,
-                            const vector<string> &search_keywords) {
+static void search_keywords(const std::string &filename,
+                            const std::vector<std::string> &search_keywords) {
   if (search_keywords.empty()) {
-    cerr << "At least one keyword is required for search." << endl;
+    std::cerr << "At least one keyword is required for search." << std::endl;
     return;
   }
 
@@ -110,98 +97,99 @@ static void search_keywords(const string &filename,
   SDSSECQSClient client(static_cast<int>(data.size()),
                         static_cast<int>(data.size()), false);
 
-  std::unordered_map<string, int> counts;
+  std::unordered_map<std::string, int> counts;
+  std::unordered_map<unsigned int, std::vector<std::string>> id_to_keywords;
   for (const auto &[id, keywords] : data) {
     for (const auto &kw : keywords) {
       counts[kw] += 1;
     }
+    id_to_keywords[id] = keywords;
   }
-  cout << std::format("{} keywords found in file.", counts.size()) << endl;
+  std::cout << std::format("{} keywords found in file.", counts.size())
+            << std::endl;
   client.load_CT(counts);
 
   // direct call with new signature
-  vector<int> result = client.search(search_keywords);
+  std::vector<int> result = client.search(search_keywords);
 
   // ------------------- output processing -------------------
   if (result.empty()) {
-    cout << "No match found." << endl;
+    std::cout << "No match found." << std::endl;
     return;
   }
 
-  // Build map from id to line for quick lookup.
-  std::ifstream fin2(filename);
-  if (!fin2.is_open()) {
-    cerr << "Cannot open file: " << filename << endl;
-    return;
-  }
-  std::unordered_map<int, string> id_to_line;
-  string line2;
-  while (std::getline(fin2, line2)) {
-    if (line2.empty())
-      continue;
-    std::stringstream ss(line2);
-    int idtmp;
-    if (!(ss >> idtmp))
-      continue;
-    id_to_line[idtmp] = line2;
-  }
-
-  const string red_start = "\033[1;31m"; // bold red
-  const string color_end = "\033[0m";
-
-  for (int id : result) {
-    cout << id << "\t";
-    auto it = id_to_line.find(id);
-    if (it == id_to_line.end()) {
-      cout << "<line not found in file>" << endl;
-      continue;
-    }
-    string l = it->second;
-    // highlight each keyword
-    for (const auto &kw : search_keywords) {
-      size_t pos = 0;
-      while ((pos = l.find(kw, pos)) != string::npos) {
-        l.replace(pos, kw.size(), red_start + kw + color_end);
-        pos += red_start.size() + kw.size() + color_end.size();
+  const std::string red_start = "\033[1;31m"; // bold red
+  const std::string color_end = "\033[0m";
+  for (const auto &id : result) {
+    const auto &keywords = id_to_keywords[id];
+    std::string line;
+    for (const auto &kw : keywords) {
+      if (std::find(search_keywords.begin(), search_keywords.end(), kw) !=
+          search_keywords.end()) {
+        line += red_start + kw + color_end;
+      } else {
+        line += kw;
       }
+      line += " ";
     }
-    cout << l << endl;
+    std::cout << std::format("{}:\t{}", id, line) << std::endl;
   }
 }
 
-int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    print_usage(argv[0]);
+int main(int argc, char **argv) {
+  args::ArgumentParser parser("Searchable encryption for conjunctive queries");
+
+  args::Group subcommands(parser, "subcommands");
+  args::Command index(subcommands, "index", "index the file");
+  args::Command delete_(subcommands, "delete", "delete the file");
+  args::Command search(subcommands, "search", "search the file");
+  args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::ArgumentParser subparser("index");
+  args::Positional<std::string> file(index, "file", "The file to index");
+  args::Positional<std::string> file_del(delete_, "file",
+                                         "The file to delete from");
+  args::Positional<unsigned int> id(delete_, "id", "The id to delete");
+  args::Positional<std::string> file_search(search, "file",
+                                            "The file to search in");
+  args::PositionalList<std::string> keywords(search, "keywords",
+                                             "The keywords to search for");
+
+  try {
+    parser.ParseCLI(argc, argv);
+  } catch (args::Help) {
+    std::cout << parser;
+    return 0;
+  } catch (args::ParseError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  } catch (args::ValidationError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
     return 1;
   }
-  string command = argv[1];
-  if (command == "index") {
-    if (argc != 3) {
-      print_usage(argv[0]);
+
+  if (index) {
+    index_file(args::get(file));
+  } else if (delete_) {
+    if (!file_del || !id) {
+      std::cerr << "Both file and id are required for delete operation"
+                << std::endl;
+      std::cerr << parser;
       return 1;
     }
-    index_file(argv[2]);
-  } else if (command == "delete") {
-    if (argc != 4) {
-      print_usage(argv[0]);
+    delete_id(args::get(file_del), args::get(id));
+  } else if (search) {
+    if (!file_search || !keywords) {
+      std::cerr << "Both file and keywords are required for search operation"
+                << std::endl;
+      std::cerr << parser;
       return 1;
     }
-    int id = std::stoi(argv[3]);
-    delete_id(argv[2], id);
-  } else if (command == "search") {
-    if (argc < 4) {
-      print_usage(argv[0]);
-      return 1;
-    }
-    string filename = argv[2];
-    vector<string> keywords;
-    for (int i = 3; i < argc; ++i) {
-      keywords.emplace_back(argv[i]);
-    }
-    search_keywords(filename, keywords);
+    search_keywords(args::get(file_search), args::get(keywords));
   } else {
-    print_usage(argv[0]);
+    std::cerr << "No command specified" << std::endl;
+    std::cerr << parser;
     return 1;
   }
-  return 0;
 }
