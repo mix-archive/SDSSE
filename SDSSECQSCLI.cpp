@@ -45,7 +45,7 @@ static void index_file(const std::string &filename) {
   for (size_t i = 0; i < data.size(); ++i) {
     const auto &[id, keywords] = data[i];
     for (const auto &keyword : keywords) {
-      client.update(INS, keyword, id);
+      client.update(UpdateOP::INS, keyword, id);
     }
     if (i % 1000 == 0) {
       std::cout << std::format("Indexed {}/{} lines, {} keywords", i,
@@ -76,7 +76,7 @@ static void delete_id(const std::string &filename, unsigned int target_id) {
   }
   const auto &[id, keywords] = *it;
   for (const auto &keyword : keywords) {
-    client.update(DEL, keyword, id);
+    client.update(UpdateOP::DEL, keyword, id);
   }
   // flush deletions
   client.flush();

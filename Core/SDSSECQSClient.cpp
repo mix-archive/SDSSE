@@ -11,7 +11,9 @@ Zr SDSSECQSClient::Fp(uint8_t *input, size_t input_size, uint8_t *key) {
   return Zr(*e, (void *)PRF, DIGEST_SIZE);
 }
 
-SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size, bool init_remote) {
+SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size, bool init_remote)
+    : TEDB(ins_size, del_size, "tedb", init_remote),
+      XEDB(ins_size, del_size, "xedb", init_remote) {
   // generate or load pairing parameters. If pairing.param does not exist,
   // generate default Type A parameters (rbits=160, qbits=512).
   FILE *sysParamFile = fopen("pairing.param", "r");
@@ -31,7 +33,7 @@ SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size, bool init_remote) {
     // reopen for reading
     sysParamFile = fopen("pairing.param", "r");
   }
-  e = new Pairing(sysParamFile);
+  e = std::make_unique<Pairing>(sysParamFile);
   fclose(sysParamFile);
   // try to load the saved group
   FILE *saved_g = fopen("elliptic_g", "rw+");
@@ -43,24 +45,18 @@ SDSSECQSClient::SDSSECQSClient(int ins_size, int del_size, bool init_remote) {
     element_set_str(old_g, s, 2);
     vector<uint8_t> old_g_in_bytes(element_length_in_bytes(old_g));
     element_to_bytes(old_g_in_bytes.data(), old_g);
-    g = new GT(*e, old_g_in_bytes.data(), old_g_in_bytes.size());
-    gpp = new GPP<GT>(*e, *g);
+    g = std::make_unique<GT>(*e, old_g_in_bytes.data(), old_g_in_bytes.size());
+    gpp = std::make_unique<GPP<GT>>(*e, *g);
   } else {
     // a new group is required
-    g = new GT(*e, false);
-    gpp = new GPP<GT>(*e, *g);
+    g = std::make_unique<GT>(*e, false);
+    gpp = std::make_unique<GPP<GT>>(*e, *g);
     element_out_str(saved_g, 2, const_cast<element_s *>(g->getElement()));
   }
   fclose(saved_g);
-
-  // initialise SSE instance
-  TEDB = new SSEClientHandler(ins_size, del_size, "tedb", "127.0.0.1", 5000,
-                              init_remote);
-  XEDB = new SSEClientHandler(ins_size, del_size, "xedb", "127.0.0.1", 5000,
-                              init_remote);
 }
 
-void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
+void SDSSECQSClient::update(UpdateOP op, const string &keyword, int ind) {
   // if w is never inserted, initialise the deletion map and counter map
   // MSK_T is used as the indicator here;
   if (CT.find(keyword) == CT.end()) {
@@ -103,7 +99,7 @@ void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
   memcpy(eyc.data() + sizeof(encrypted_id), y_in_byte.data(), y_in_byte.size());
   memcpy(eyc.data() + sizeof(encrypted_id) + y_in_byte.size(), &c, sizeof(int));
   // upload to TEDB
-  TEDB->update(op, keyword, ind, eyc.data(), eyc.size());
+  TEDB.update(op, keyword, ind, eyc.data(), eyc.size());
 
   // generate xterm=g^(Fp(K_X, w)*xind)
   GT wxtag = (*gpp) ^ (Fp((uint8_t *)keyword.c_str(), keyword.size(), K_X) *
@@ -117,10 +113,11 @@ void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
                                     wxtag.getElement())),
          &c, sizeof(int));
   // upload to XEDB
-  XEDB->update(op, keyword, ind, wxtag_in_byte.data(), wxtag_in_byte.size());
+  XEDB.update(op, keyword, ind, wxtag_in_byte.data(), wxtag_in_byte.size());
 }
 
-std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords) {
+std::vector<int>
+SDSSECQSClient::search(const std::vector<std::string> &keywords) {
   std::vector<int> res;
 
   if (keywords.empty()) {
@@ -146,7 +143,6 @@ std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords
 
   if (!xterms.empty()) {
     // wxtokens
-    wxtoken_list.reserve(static_cast<size_t>(CT[sterm] + 1));
     for (int i = 0; i <= CT[sterm]; ++i) {
       std::vector<uint8_t> w_i(sterm.size() + sizeof(int));
       memset(w_i.data(), 0, w_i.size());
@@ -155,32 +151,30 @@ std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords
 
       Zr z = Fp(w_i.data(), w_i.size(), K_Z);
 
-      std::vector<GT> token_i;
-      token_i.reserve(xterms.size());
-      for (const std::string &xterm : xterms) {
-        token_i.emplace_back((*gpp) ^
-                             (z * Fp((uint8_t *)xterm.c_str(), xterm.size(), K_X) *
-                               Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z)));
+      std::vector<GT> token_i(xterms.size());
+      for (size_t j = 0; j < xterms.size(); ++j) {
+        auto &xterm = xterms[j];
+        token_i[j] =
+            (*gpp) ^ (z * Fp((uint8_t *)xterm.c_str(), xterm.size(), K_X) *
+                      Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z));
       }
       wxtoken_list.emplace_back(std::move(token_i));
     }
 
     // zxtokens
-    for (const std::string &xterm : xterms) {
+    for (auto &xterm : xterms) {
       if (CT.find(xterm) == CT.end()) {
         return res;
       }
 
-      std::vector<Zr> zx_i;
-      zx_i.reserve(static_cast<size_t>(CT[xterm] + 1));
-      for (int k = 0; k <= CT[xterm]; ++k) {
+      std::vector<Zr> zx_i(static_cast<size_t>(CT[xterm] + 1));
+      for (size_t k = 0; k < zx_i.size(); ++k) {
         std::vector<uint8_t> w_j(xterm.size() + sizeof(int));
         memset(w_j.data(), 0, w_j.size());
         memcpy(w_j.data(), xterm.c_str(), xterm.size());
         memcpy(w_j.data() + xterm.size(), &k, sizeof(int));
-
-        zx_i.emplace_back(Fp(w_j.data(), w_j.size(), K_x) *
-                          Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z));
+        zx_i[k] = Fp(w_j.data(), w_j.size(), K_x) *
+                  Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z);
       }
       zxtoken_list.emplace_back(std::move(zx_i));
     }
@@ -189,7 +183,7 @@ std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords
   // ------------------------------------------------------------------
   // 2. Query TEDB
   // ------------------------------------------------------------------
-  std::vector<std::string> Res_T = TEDB->search(sterm);
+  std::vector<std::string> Res_T = TEDB.search(sterm);
   if (Res_T.empty()) {
     return res;
   }
@@ -200,14 +194,16 @@ std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords
   int XSET_SIZE = get_BF_size(XSET_HASH, MAX_DB_SIZE, XSET_FP);
   BloomFilter<128, XSET_HASH> Res_WX(XSET_SIZE);
   for (size_t j = 0; j < xterms.size(); ++j) {
-    std::vector<std::string> Res_wxtags = XEDB->search(xterms[j]);
+    std::vector<std::string> Res_wxtags = XEDB.search(xterms[j]);
     if (Res_wxtags.empty()) {
       return res;
     }
     for (const auto &wxtag_string : Res_wxtags) {
-      GT tag = GT(*e, reinterpret_cast<const unsigned char *>(wxtag_string.c_str()),
-                  128) ^
-                zxtoken_list[j][*reinterpret_cast<const int *>(wxtag_string.c_str() + 128)];
+      GT tag =
+          GT(*e, reinterpret_cast<const unsigned char *>(wxtag_string.c_str()),
+             128) ^
+          zxtoken_list[j][*reinterpret_cast<const int *>(wxtag_string.c_str() +
+                                                         128)];
       Res_WX.add_tag((uint8_t *)tag.toString().c_str());
     }
   }
@@ -220,8 +216,8 @@ std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords
     bool flag = true;
     Zr y = Zr(*e, t_tuple.c_str() + SM4_BLOCK_SIZE + sizeof(int), 20);
     for (size_t j = 0; j < xterms.size(); ++j) {
-      GT tag = wxtoken_list[*reinterpret_cast<const int *>(t_tuple.c_str() +
-                                SM4_BLOCK_SIZE + sizeof(int) + 20)][j] ^
+      GT tag = wxtoken_list[*reinterpret_cast<const int *>(
+                   t_tuple.c_str() + SM4_BLOCK_SIZE + sizeof(int) + 20)][j] ^
                y;
       if (!Res_WX.might_contain((uint8_t *)tag.toString().c_str())) {
         flag = false;
@@ -248,12 +244,4 @@ std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords
   }
 
   return res;
-}
-
-SDSSECQSClient::~SDSSECQSClient() {
-  delete TEDB;  // Ensures pending insertions are flushed to server
-  delete XEDB;
-  delete g;
-  delete gpp;
-  delete e;
 }

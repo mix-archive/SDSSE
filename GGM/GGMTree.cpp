@@ -23,23 +23,22 @@ void GGMTree::derive_key_from_tree(uint8_t *current_key, long offset,
 }
 
 vector<GGMNode> GGMTree::min_coverage(vector<GGMNode> node_list) {
-  vector<GGMNode> next_level_node;
+  vector<GGMNode> next_level_node(node_list.size());
 
   for (size_t i = 0; i < node_list.size(); ++i) {
-    auto node1 = node_list[i];
+    auto &node1 = node_list[i];
 
     if (i + 1 == node_list.size()) {
-      next_level_node.emplace_back(node1);
+      next_level_node[i] = node1;
     } else {
-      auto node2 = node_list[i + 1];
+      auto &node2 = node_list[i + 1];
       // same parent in the binary path
       if (((node1.index >> 1) == (node2.index >> 1)) &&
           (node1.level == node2.level)) {
-        next_level_node.emplace_back(
-            GGMNode(node1.index >> 1, node1.level - 1));
+        next_level_node[i] = GGMNode(node1.index >> 1, node1.level - 1);
         i++;
       } else {
-        next_level_node.emplace_back(node1);
+        next_level_node[i] = node1;
       }
     }
   }

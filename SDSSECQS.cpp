@@ -26,10 +26,10 @@ int main(int argc, char *argv[]) {
       duration_cast<microseconds>(system_clock::now().time_since_epoch())
           .count();
   for (int i = 0; i < w1_size; ++i) {
-    client.update(INS, "alice", i);
+    client.update(UpdateOP::INS, "alice", i);
   }
   for (int i = 0; i < w2_size; ++i) {
-    client.update(INS, "bob", i);
+    client.update(UpdateOP::INS, "bob", i);
   }
   auto end = duration_cast<microseconds>(system_clock::now().time_since_epoch())
                  .count();
@@ -38,8 +38,8 @@ int main(int argc, char *argv[]) {
   start = duration_cast<microseconds>(system_clock::now().time_since_epoch())
               .count();
   for (int i = 0; i < del_size; ++i) {
-    client.update(DEL, "alice", i);
-    client.update(DEL, "bob", i);
+    client.update(UpdateOP::DEL, "alice", i);
+    client.update(UpdateOP::DEL, "bob", i);
   }
   end = duration_cast<microseconds>(system_clock::now().time_since_epoch())
             .count();

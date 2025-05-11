@@ -19,8 +19,8 @@
 
 class SSEServerClient {
 public:
-  explicit SSEServerClient(std::string host = "127.0.0.1", uint16_t port = 5000,
-                           std::string db_id = "default")
+  explicit SSEServerClient(std::string db_id, std::string host = "127.0.0.1",
+                           uint16_t port = 5000)
       : host_(std::move(host)), port_(port), db_id_(std::move(db_id)), fd_(-1) {
   }
 

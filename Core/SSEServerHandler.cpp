@@ -39,7 +39,7 @@ vector<string> SSEServerHandler::search(uint8_t *token,
     if (tags.find(label_str) == tags.end())
       break;
     // get the insert position of the tag
-    vector<long> search_pos = BloomFilter<32, HASH_SIZE>::get_index(
+    auto search_pos = BloomFilter<32, HASH_SIZE>::get_index(
         (uint8_t *)tags[label_str].c_str(), this->GGM_SIZE);
     sort(search_pos.begin(), search_pos.end());
     // derive the key from search position and decrypt the id

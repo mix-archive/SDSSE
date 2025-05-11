@@ -3,19 +3,19 @@
 #include <vector>
 
 int main() {
-  SSEClientHandler client(200, 10);
+  SSEClientHandler client(200, 10, "test", false);
 
   //    cout <<
   //    duration_cast<microseconds>(system_clock::now().time_since_epoch()).count()
   //    << endl;
   for (int i = 0; i < 200; ++i) {
-    client.update(INS, "test", i, (uint8_t *)&i, sizeof(i));
+    client.update(UpdateOP::INS, "test", i, (uint8_t *)&i, sizeof(i));
   }
   //    cout <<
   //    duration_cast<microseconds>(system_clock::now().time_since_epoch()).count()
   //    << endl;
   for (int i = 0; i < 10; ++i) {
-    client.update(DEL, "test", i, (uint8_t *)&i, sizeof(i));
+    client.update(UpdateOP::DEL, "test", i, (uint8_t *)&i, sizeof(i));
   }
 
   std::vector<std::string> results = client.search("test");

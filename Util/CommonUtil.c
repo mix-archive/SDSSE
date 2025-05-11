@@ -2,8 +2,9 @@
 #include <openssl/evp.h>
 #include <string.h>
 
-int sm4_encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
-                unsigned char *iv, unsigned char *ciphertext) {
+int sm4_encrypt(const unsigned char *plaintext, int plaintext_len,
+                const unsigned char *key, const unsigned char *iv,
+                unsigned char *ciphertext) {
   EVP_CIPHER_CTX *ctx;
 
   int len = 0;
@@ -30,8 +31,8 @@ int sm4_encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
   return ciphertext_len;
 }
 
-int sm4_decrypt(unsigned char *ciphertext, int ciphertext_len,
-                unsigned char *key, unsigned char *iv,
+int sm4_decrypt(const unsigned char *ciphertext, int ciphertext_len,
+                const unsigned char *key, const unsigned char *iv,
                 unsigned char *plaintext) {
   EVP_CIPHER_CTX *ctx;
 
@@ -59,7 +60,7 @@ int sm4_decrypt(unsigned char *ciphertext, int ciphertext_len,
   return plaintext_len;
 }
 
-void sm3_digest(unsigned char *plaintext, int plaintext_len,
+void sm3_digest(const unsigned char *plaintext, int plaintext_len,
                 unsigned char *digest) {
   unsigned int digest_len;
   EVP_MD_CTX *mdctx;
@@ -78,16 +79,16 @@ void sm3_digest(unsigned char *plaintext, int plaintext_len,
   EVP_MD_CTX_free(mdctx);
 }
 
-unsigned int hmac_digest(unsigned char *plaintext, int plaintext_len,
-                         unsigned char *key, int key_len,
+unsigned int hmac_digest(const unsigned char *plaintext, int plaintext_len,
+                         const unsigned char *key, int key_len,
                          unsigned char *digest) {
   unsigned int digest_len;
   HMAC(EVP_sm3(), key, key_len, plaintext, plaintext_len, digest, &digest_len);
   return digest_len;
 }
 
-unsigned int key_derivation(unsigned char *plaintext, int plaintext_len,
-                            unsigned char *key, int key_len,
+unsigned int key_derivation(const unsigned char *plaintext, int plaintext_len,
+                            const unsigned char *key, int key_len,
                             unsigned char *digest) {
   unsigned char sm3_hmac_digest[DIGEST_SIZE];
   hmac_digest(plaintext, plaintext_len, key, key_len, sm3_hmac_digest);

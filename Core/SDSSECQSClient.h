@@ -21,13 +21,13 @@ private:
   uint8_t *iv = (unsigned char *)"9876543210123456";
 
   // pairing and GT element
-  PBC::Pairing *e;
-  PBC::GT *g;
-  PBC::GPP<PBC::GT> *gpp;
+  std::unique_ptr<PBC::Pairing> e;
+  std::unique_ptr<PBC::GT> g;
+  std::unique_ptr<PBC::GPP<PBC::GT>> gpp;
 
   // SSE Instance
-  SSEClientHandler *TEDB;
-  SSEClientHandler *XEDB;
+  SSEClientHandler TEDB;
+  SSEClientHandler XEDB;
 
   // state map
   std::unordered_map<std::string, int> CT;
@@ -35,10 +35,11 @@ private:
   PBC::Zr Fp(uint8_t *input, size_t input_size, uint8_t *key);
 
 public:
-  explicit SDSSECQSClient(int ins_size, int del_size, bool init_remote = true);
-  void update(OP op, const std::string &keyword, int ind);
+  SDSSECQSClient(int ins_size, int del_size, bool init_remote = true);
+  ~SDSSECQSClient() { flush(); }
+
+  void update(UpdateOP op, const std::string &keyword, int ind);
   std::vector<int> search(const std::vector<std::string> &keywords);
-  ~SDSSECQSClient();
 
   // Load keyword counter map (CT) from external source, replacing existing
   // entries. Each value should be (number_of_insertions_for_keyword - 1).
@@ -48,8 +49,8 @@ public:
 
   // Force flush pending insertions to server.
   void flush() {
-    TEDB->flush();
-    XEDB->flush();
+    TEDB.flush();
+    XEDB.flush();
   }
 };
 

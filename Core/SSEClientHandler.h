@@ -10,16 +10,16 @@
 #include <unordered_map>
 #include <vector>
 
-enum OP { INS, DEL };
+enum class UpdateOP { INS, DEL };
 
 class SSEClientHandler {
 private:
-  uint8_t *key = (unsigned char *)"0123456789123456";
-  uint8_t *iv = (unsigned char *)"0123456789123456";
+  static constexpr unsigned char key[] = "0123456789123456";
+  static constexpr unsigned char iv[] = "0123456789123456";
 
-  GGMTree *tree;
+  GGMTree tree;
   int GGM_SIZE;
-  BloomFilter<32, HASH_SIZE> *delete_bf;
+  BloomFilter<32, HASH_SIZE> delete_bf;
   std::unordered_map<std::string, int> C; // search time
 
   // batching support
@@ -29,19 +29,18 @@ private:
 
   void flush_batch();
 
-  SSEServerClient *server;
+  SSEServerClient server;
 
 public:
   // If init_remote is true (default), constructor will reset/initialise the
   // corresponding server-side handler. Set it to false when you only want to
   // connect to an existing database without wiping its contents.
-  SSEClientHandler(int ins_size, int del_size, bool init_remote = true);
   SSEClientHandler(int ins_size, int del_size, const std::string &db_id,
-                   const std::string &host = "127.0.0.1", uint16_t port = 5000,
-                   bool init_remote = true);
-  ~SSEClientHandler();
-  void update(OP op, const std::string &keyword, int ind, uint8_t *content,
-              size_t content_len);
+                   bool init_remote = true,
+                   const std::string &host = "127.0.0.1", uint16_t port = 5000);
+  ~SSEClientHandler() { flush(); }
+  void update(UpdateOP op, const std::string &keyword, int ind,
+              uint8_t *content, size_t content_len);
   std::vector<std::string> search(const std::string &keyword);
 
   // Force commit any pending batched entries to the server immediately.
