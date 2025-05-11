@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Bootstrap vcpkg & configure CMake
+        env:
+          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        run: |
+          ./extern/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build with Ninja
+        run: cmake --build build -j$(nproc)
+
+      - name: Install build outputs
+        run: |
+          mkdir -p artifacts
+          cmake --install build --prefix artifacts
+          cp -r Data artifacts/data
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: build-artifacts
+          path: artifacts
