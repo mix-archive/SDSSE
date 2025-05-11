@@ -80,7 +80,7 @@ TARGET_LINK_LIBRARIES(GGMTest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SSETest OpenSSL::Crypto)
 TARGET_LINK_LIBRARIES(SDSSECQ OpenSSL::Crypto PBCWrapper msgpack-cxx)
 TARGET_LINK_LIBRARIES(SDSSECQS OpenSSL::Crypto PBCWrapper msgpack-cxx)
-TARGET_LINK_LIBRARIES(SSEServerStandalone OpenSSL::Crypto msgpack-cxx pthread)
+TARGET_LINK_LIBRARIES(SSEServerStandalone OpenSSL::Crypto msgpack-cxx pthread taywee::args)
 TARGET_LINK_LIBRARIES(SDSSECQSCLI OpenSSL::Crypto PBCWrapper msgpack-cxx taywee::args)
 
 install(TARGETS SM4Test BloomFilterTest GGMTest SSETest SDSSECQ SDSSECQS SSEServerStandalone SDSSECQSCLI

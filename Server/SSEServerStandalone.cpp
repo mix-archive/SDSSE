@@ -1,8 +1,10 @@
 #include "Core/SSEServerHandler.h"
 #include "GGM/GGMNode.h"
+#include <args.hxx>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -25,6 +27,7 @@
 #include "Util/CommonUtil.h"
 
 static constexpr uint16_t DEFAULT_PORT = 5000;
+static constexpr const char *DEFAULT_HOST = "0.0.0.0";
 
 // Helper: get current timestamp in human-readable form with millisecond
 // resolution
@@ -59,9 +62,11 @@ static std::string format_duration(std::chrono::steady_clock::duration dur) {
   } else if (dur < minutes{1}) {
     return std::format("{:.3f} s", duration<double>(dur).count());
   } else if (dur < hours{1}) {
-    return std::format("{:.3f} min", duration<double, std::ratio<60>>(dur).count());
+    return std::format("{:.3f} min",
+                       duration<double, std::ratio<60>>(dur).count());
   } else {
-    return std::format("{:.3f} h", duration<double, std::ratio<3600>>(dur).count());
+    return std::format("{:.3f} h",
+                       duration<double, std::ratio<3600>>(dur).count());
   }
 }
 
@@ -244,7 +249,8 @@ static void handle_client(int client_fd) {
                         });
         }
         auto dur = std::chrono::steady_clock::now() - start;
-        log("add_entries_batch ({} items) took {}", entries.size(), format_duration(dur));
+        log("add_entries_batch ({} items) took {}", entries.size(),
+            format_duration(dur));
         send_status_ok(client_fd);
         break;
       }
@@ -328,8 +334,24 @@ static void handle_client(int client_fd) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc > 1) {
-    std::cerr << "Usage: " << argv[0] << std::endl;
+  // Parse command line arguments
+  args::ArgumentParser parser("SSE Server", "");
+  args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::Positional<std::string> host(
+      parser, "host", "Host address to bind to (default: 0.0.0.0)",
+      DEFAULT_HOST);
+  args::ValueFlag<uint16_t> port(parser, "port",
+                                 "Port to listen on (default: 5000)",
+                                 {'p', "port"}, DEFAULT_PORT);
+
+  try {
+    parser.ParseCLI(argc, argv);
+  } catch (const args::Help &) {
+    std::cout << parser;
+    return 0;
+  } catch (const args::ParseError &e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
     return 1;
   }
 
@@ -338,13 +360,34 @@ int main(int argc, char *argv[]) {
     perror("socket");
     return 1;
   }
-  int opt = 1;
-  setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(DEFAULT_PORT);
+  addr.sin_port = htons(args::get(port));
+
+  // Convert host string to network address
+  if (inet_pton(AF_INET, args::get(host).c_str(), &addr.sin_addr) <= 0) {
+    std::cerr << "Invalid address: " << args::get(host) << std::endl;
+    close(server_fd);
+    return 1;
+  }
+
+  // Set socket options
+  int opt = 1;
+  // Allow port reuse
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    perror("setsockopt: SO_REUSEADDR");
+    close(server_fd);
+    return 1;
+  }
+
+  // Enable TCP Fast Open
+  int qlen = 5; // Queue length for TCP Fast Open
+  if (setsockopt(server_fd, IPPROTO_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen)) <
+      0) {
+    perror("setsockopt: TCP_FASTOPEN");
+    // Non-fatal error, continue execution
+  }
 
   if (bind(server_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0) {
     perror("bind");
@@ -357,7 +400,7 @@ int main(int argc, char *argv[]) {
     close(server_fd);
     return 1;
   }
-  log("SSE Server listening on port {}", DEFAULT_PORT);
+  log("SSE Server listening on {}:{}", args::get(host), args::get(port));
 
   while (true) {
     sockaddr_in client_addr{};

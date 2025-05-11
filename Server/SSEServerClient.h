@@ -8,6 +8,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -21,8 +22,11 @@ class SSEServerClient {
 public:
   explicit SSEServerClient(std::string db_id, std::string host = "127.0.0.1",
                            uint16_t port = 5000)
-      : host_(std::move(host)), port_(port), db_id_(std::move(db_id)), fd_(-1) {
-  }
+      : host_(std::move(host)), port_(port), db_id_(std::move(db_id)), fd_(-1),
+        use_fast_open_(true) {}
+
+  // Enable or disable TCP Fast Open
+  inline void set_tcp_fast_open(bool enabled) { use_fast_open_ = enabled; }
 
   // Send add_entries command. Returns true on success.
   inline bool
@@ -191,7 +195,8 @@ private:
   std::string host_;
   uint16_t port_;
   std::string db_id_;
-  mutable int fd_; // persistent socket, -1 means closed
+  mutable int fd_;     // persistent socket, -1 means closed
+  bool use_fast_open_; // whether to use TCP Fast Open
 
   // Ensure we have an open socket, connect if necessary.
   inline int ensure_socket() const {
@@ -215,6 +220,16 @@ private:
       perror("socket");
       return -1;
     }
+
+    // Enable TCP Fast Open if requested
+    if (use_fast_open_) {
+      int qlen = 5; // Queue length for TCP Fast Open
+      if (setsockopt(fd, IPPROTO_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen)) < 0) {
+        // Not a fatal error, just log and continue
+        perror("setsockopt: TCP_FASTOPEN (client)");
+      }
+    }
+
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port_);
