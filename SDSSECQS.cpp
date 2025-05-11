@@ -48,14 +48,14 @@ int main(int argc, char *argv[]) {
   // search the database
   start = duration_cast<microseconds>(system_clock::now().time_since_epoch())
               .count();
-  vector<int> single_results = client.search(1, "alice");
+  vector<int> single_results = client.search({"alice"});
   end = duration_cast<microseconds>(system_clock::now().time_since_epoch())
             .count();
   cout << "Single Keyword Search Time: " << (float)(end - start) / 1000 << " ms"
        << endl;
   start = duration_cast<microseconds>(system_clock::now().time_since_epoch())
               .count();
-  vector<int> conjunctive_results = client.search(2, "alice", "bob");
+  vector<int> conjunctive_results = client.search({"alice", "bob"});
   end = duration_cast<microseconds>(system_clock::now().time_since_epoch())
             .count();
   cout << "Two-Keyword Conjunctive Search Time: " << (float)(end - start) / 1000

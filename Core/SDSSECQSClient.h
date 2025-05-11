@@ -37,7 +37,7 @@ private:
 public:
   explicit SDSSECQSClient(int ins_size, int del_size, bool init_remote = true);
   void update(OP op, const std::string &keyword, int ind);
-  std::vector<int> search(int count, ...);
+  std::vector<int> search(const std::vector<std::string> &keywords);
   ~SDSSECQSClient();
 
   // Load keyword counter map (CT) from external source, replacing existing

@@ -120,102 +120,108 @@ void SDSSECQSClient::update(OP op, const string &keyword, int ind) {
   XEDB->update(op, keyword, ind, wxtag_in_byte.data(), wxtag_in_byte.size());
 }
 
-vector<int> SDSSECQSClient::search(int count, ...) {
-  vector<int> res;
-  // xtoken list
-  vector<vector<GT>> wxtoken_list; // xtoken list (GT element list)
-  vector<vector<Zr>> zxtoken_list; // wxp list (Zr element list)
+std::vector<int> SDSSECQSClient::search(const std::vector<std::string> &keywords) {
+  std::vector<int> res;
 
-  // start to read the keyword list
-  va_list keyword_list;
-  va_start(keyword_list, count);
-  string sterm = string(va_arg(keyword_list, char *));
-  // if sterm is never inserted, return an empty vector
-  if (CT.find(sterm) == CT.end()) {
-    return {};
+  if (keywords.empty()) {
+    return res;
   }
-  // read all xterms
-  vector<string> xterms;
-  if (count > 1) {
-    for (int i = 1; i < count; i++) {
-      xterms.emplace_back(va_arg(keyword_list, char *));
-    }
-    // compute wxtokens
-    for (int i = 0; i <= CT[sterm]; i++) {
-      // w_i=w||i
-      vector<uint8_t> w_i(sterm.size() + sizeof(int));
-      // reset the buffer
-      memset(w_i.data(), 0, sterm.size() + sizeof(int));
+
+  const std::string &sterm = keywords[0];
+  if (CT.find(sterm) == CT.end()) {
+    return res;
+  }
+
+  // Split conjunctive terms
+  std::vector<std::string> xterms;
+  if (keywords.size() > 1) {
+    xterms.assign(keywords.begin() + 1, keywords.end());
+  }
+
+  // ------------------------------------------------------------------
+  // 1. Pre-compute tokens
+  // ------------------------------------------------------------------
+  std::vector<std::vector<GT>> wxtoken_list; // wxtokens for (w,i)
+  std::vector<std::vector<Zr>> zxtoken_list; // zx tokens for (x,k)
+
+  if (!xterms.empty()) {
+    // wxtokens
+    wxtoken_list.reserve(static_cast<size_t>(CT[sterm] + 1));
+    for (int i = 0; i <= CT[sterm]; ++i) {
+      std::vector<uint8_t> w_i(sterm.size() + sizeof(int));
+      memset(w_i.data(), 0, w_i.size());
       memcpy(w_i.data(), sterm.c_str(), sterm.size());
-      memcpy(w_i.data() + sterm.size(), (uint8_t *)&i, sizeof(int));
-      // compute the xtokens for this update
-      vector<GT> token_i;
-      // compute z=Fp(K_Z, w||i)
+      memcpy(w_i.data() + sterm.size(), &i, sizeof(int));
+
       Zr z = Fp(w_i.data(), w_i.size(), K_Z);
+
+      std::vector<GT> token_i;
       token_i.reserve(xterms.size());
-      for (const string &xterm : xterms) {
-        token_i.emplace_back(
-            (*gpp) ^ (z * Fp((uint8_t *)xterm.c_str(), xterm.size(), K_X) *
-                      Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z)));
+      for (const std::string &xterm : xterms) {
+        token_i.emplace_back((*gpp) ^
+                             (z * Fp((uint8_t *)xterm.c_str(), xterm.size(), K_X) *
+                               Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z)));
       }
-      wxtoken_list.emplace_back(token_i);
+      wxtoken_list.emplace_back(std::move(token_i));
     }
 
-    for (const string &xterm : xterms) {
-      // if xterm is never inserted, return an empty vector
+    // zxtokens
+    for (const std::string &xterm : xterms) {
       if (CT.find(xterm) == CT.end()) {
-        return {};
+        return res;
       }
-      vector<Zr> zx_i;
-      for (int k = 0; k <= CT[xterm]; k++) {
-        // w_j=w||j
-        vector<uint8_t> w_j(xterm.size() + sizeof(int));
-        // reset the buffer
-        memset(w_j.data(), 0, xterm.size() + sizeof(int));
+
+      std::vector<Zr> zx_i;
+      zx_i.reserve(static_cast<size_t>(CT[xterm] + 1));
+      for (int k = 0; k <= CT[xterm]; ++k) {
+        std::vector<uint8_t> w_j(xterm.size() + sizeof(int));
+        memset(w_j.data(), 0, w_j.size());
         memcpy(w_j.data(), xterm.c_str(), xterm.size());
-        memcpy(w_j.data() + xterm.size(), (uint8_t *)&k, sizeof(int));
+        memcpy(w_j.data() + xterm.size(), &k, sizeof(int));
+
         zx_i.emplace_back(Fp(w_j.data(), w_j.size(), K_x) *
                           Fp((uint8_t *)sterm.c_str(), sterm.size(), K_z));
       }
-      zxtoken_list.emplace_back(zx_i);
+      zxtoken_list.emplace_back(std::move(zx_i));
     }
   }
-  va_end(keyword_list);
 
-  // invoke search (server part)
-  // 1. query TEDB for TSets
-  vector<string> Res_T = TEDB->search(sterm);
+  // ------------------------------------------------------------------
+  // 2. Query TEDB
+  // ------------------------------------------------------------------
+  std::vector<std::string> Res_T = TEDB->search(sterm);
   if (Res_T.empty()) {
-    return {};
+    return res;
   }
 
-  // use a constant DB size
+  // ------------------------------------------------------------------
+  // 3. Query XEDB
+  // ------------------------------------------------------------------
   int XSET_SIZE = get_BF_size(XSET_HASH, MAX_DB_SIZE, XSET_FP);
-  // 2. query XEDB for XSets
   BloomFilter<128, XSET_HASH> Res_WX(XSET_SIZE);
-  for (int j = 1; j < count; j++) {
-    vector<string> Res_wxtags = XEDB->search(xterms[j - 1]);
-    // if any of the xterm cannot be found, search end, no conjunction
+  for (size_t j = 0; j < xterms.size(); ++j) {
+    std::vector<std::string> Res_wxtags = XEDB->search(xterms[j]);
     if (Res_wxtags.empty()) {
-      return {};
+      return res;
     }
     for (const auto &wxtag_string : Res_wxtags) {
-      GT tag =
-          GT(*e, reinterpret_cast<const unsigned char *>(wxtag_string.c_str()),
-             128) ^
-          zxtoken_list[j - 1][*((int *)(wxtag_string.c_str() + 128))];
+      GT tag = GT(*e, reinterpret_cast<const unsigned char *>(wxtag_string.c_str()),
+                  128) ^
+                zxtoken_list[j][*reinterpret_cast<const int *>(wxtag_string.c_str() + 128)];
       Res_WX.add_tag((uint8_t *)tag.toString().c_str());
     }
   }
 
-  // 3. search intersections in TSet
-  vector<uint8 *> encrypted_res_list;
-  for (const string &t_tuple : Res_T) {
-    auto flag = true;
+  // ------------------------------------------------------------------
+  // 4. Intersect results
+  // ------------------------------------------------------------------
+  std::vector<uint8 *> encrypted_res_list;
+  for (const std::string &t_tuple : Res_T) {
+    bool flag = true;
     Zr y = Zr(*e, t_tuple.c_str() + SM4_BLOCK_SIZE + sizeof(int), 20);
-    for (int j = 1; j < count; j++) {
-      GT tag = wxtoken_list[*(int *)(t_tuple.c_str() + SM4_BLOCK_SIZE +
-                                     sizeof(int) + 20)][j - 1] ^
+    for (size_t j = 0; j < xterms.size(); ++j) {
+      GT tag = wxtoken_list[*reinterpret_cast<const int *>(t_tuple.c_str() +
+                                SM4_BLOCK_SIZE + sizeof(int) + 20)][j] ^
                y;
       if (!Res_WX.might_contain((uint8_t *)tag.toString().c_str())) {
         flag = false;
@@ -223,22 +229,24 @@ vector<int> SDSSECQSClient::search(int count, ...) {
       }
     }
     if (flag) {
-      // add to res set
       encrypted_res_list.emplace_back((uint8 *)t_tuple.c_str());
     }
   }
 
-  // decrypt e locally
-  // generate the key for sterm
+  // ------------------------------------------------------------------
+  // 5. Decrypt results locally
+  // ------------------------------------------------------------------
   uint8_t K_w[DIGEST_SIZE];
   hmac_digest((unsigned char *)sterm.c_str(), sterm.size(), K, SM4_BLOCK_SIZE,
               K_w);
+
   for (auto encrypted_res : encrypted_res_list) {
     int ind;
     sm4_decrypt(encrypted_res + SM4_BLOCK_SIZE, sizeof(int), K_w, encrypted_res,
                 (uint8_t *)&ind);
     res.push_back(ind);
   }
+
   return res;
 }
 
