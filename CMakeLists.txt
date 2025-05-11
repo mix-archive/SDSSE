@@ -16,8 +16,8 @@ endif()
 
 if (CMAKE_BUILD_TYPE MATCHES Release)
     message(STATUS "Release build")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -march=native")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto -ffat-lto-objects -fuse-linker-plugin")
 endif()
 

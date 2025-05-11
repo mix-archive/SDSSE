@@ -9,6 +9,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        build-type:
+          - Release
+          - Debug
+
     steps:
       - name: Checkout source
         uses: actions/checkout@main
@@ -27,7 +33,7 @@ jobs:
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
         run: |
           ./extern/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
 
       - name: Build with Ninja
         run: cmake --build build -j$(nproc)
@@ -41,5 +47,5 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@main
         with:
-          name: build-artifacts
+          name: build-artifacts-${{ matrix.build-type }}
           path: artifacts
